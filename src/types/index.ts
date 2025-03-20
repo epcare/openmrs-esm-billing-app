@@ -174,6 +174,7 @@ export type BillabeItem = {
   name?: string;
   commonName?: string;
   servicePrices?: ServicePrice[];
+  purchasePrice?: number;
 };
 
 export type ServicePrice = {
@@ -193,4 +194,11 @@ export interface BillableService {
     name: string;
     price: number;
   }>;
+}
+export interface StockItem {
+  uuid: string;
+  drugUuid: string;
+  drugName: string;
+  conceptUuid: string;
+  conceptName: string;
 }
