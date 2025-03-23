@@ -1,8 +1,8 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "tasks": {
+  "pipeline": {
     "build": {
-      "outputs": ["dist/**"]
+      "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {},
     "extract-translations": {
@@ -12,7 +12,6 @@
     "coverage": {
       "outputs": ["coverage/**"]
     },
-    "typescript": {},
-    "verify": {}
+    "typescript": {}
   }
 }
