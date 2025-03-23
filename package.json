@@ -1,12 +1,12 @@
 {
-  "name": "@openmrs/esm-billing-app",
+  "name": "@ugandaemr/esm-billing-app",
   "version": "1.0.0",
   "description": "O3 frontend module for handling billing concerns in healthcare settings",
   "browser": "dist/openmrs-esm-billing-app.js",
   "main": "src/index.ts",
   "source": true,
   "license": "MPL-2.0",
-  "homepage": "https://github.com/openmrs/openmrs-esm-billing-app#readme",
+  "homepage": "https://github.com/METS-Programme/openmrs-esm-billing-app#readme",
   "scripts": {
     "start": "openmrs develop",
     "analyze": "webpack --mode=production --env.analyze=true",
@@ -35,10 +35,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openmrs/openmrs-esm-billing-app#readme"
+    "url": "git+https://github.com/METS-Programme/openmrs-esm-billing-app#readme"
   },
   "bugs": {
-    "url": "https://github.com/openmrs/openmrs-esm-billing-app/issues"
+    "url": "https://github.com/METS-Programme/openmrs-esm-billing-app/issues"
   },
   "dependencies": {
     "@carbon/react": "^1.48.1",
