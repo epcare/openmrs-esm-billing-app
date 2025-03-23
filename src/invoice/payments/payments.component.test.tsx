@@ -23,6 +23,7 @@ jest.mock('@openmrs/esm-framework', () => ({
   navigate: jest.fn(),
   createGlobalStore: jest.fn(),
   createUseStore: jest.fn(),
+  translateFrom: jest.fn(),
   useLayoutType: jest.fn().mockReturnValue('desktop'),
   formatDate: jest.fn().mockReturnValue('2023-09-01'),
 }));
