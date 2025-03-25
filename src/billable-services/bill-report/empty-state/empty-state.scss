@@ -1,0 +1,29 @@
+@use '@carbon/styles/scss/colors';
+@use '@carbon/styles/scss/type';
+@use '@carbon/styles/scss/spacing';
+
+.layer {
+  //display: flex;
+  //justify-content: center;
+  //align-items: center;
+  //padding: spacing.$spacing-05;
+  margin: 2rem 1rem;
+  text-align: center;
+  border: 1px solid colors.$gray-20;
+}
+
+.tile {
+  margin: auto;
+}
+
+.content {
+  @include type.type-style("heading-compact-02");
+  color: colors.$gray-70;
+  margin-top: spacing.$spacing-05;
+  margin-bottom: spacing.$spacing-03;
+}
+
+.explainer {
+  @include type.type-style('body-compact-01');
+  color: colors.$gray-70;
+}

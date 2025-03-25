@@ -184,3 +184,16 @@ export const useStockItems = () => {
     mutate,
   };
 };
+
+export const useGetills = () => {
+  const url = `${apiBasePath}bill?q=&v=full`;
+  const { data, isLoading, isValidating, error, mutate } = useOpenmrsFetchAll(url);
+
+  return {
+    billItems: (data as any[]) ?? [],
+    isLoadingItems: isLoading,
+    isValidating,
+    error,
+    mutate,
+  };
+};
