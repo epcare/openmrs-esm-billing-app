@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SideNav, SideNavItems, SideNavLink, SideNavMenu, SideNavMenuItem } from '@carbon/react';
-import { Wallet, Money, Settings } from '@carbon/react/icons';
+import { Wallet, Money, Settings, ReportData } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import { UserHasAccess, navigate } from '@openmrs/esm-framework';
 import AddBillableService from './create-edit/add-billable-service.component';
@@ -11,6 +11,7 @@ import BillingHeader from '../billing-header/billing-header.component';
 import CashPointConfiguration from './cash-point/cash-point-configuration.component';
 import PaymentModesConfig from './payyment-modes/payment-modes-config.component';
 import styles from './billable-services.scss';
+import BillingReports from './bill-report/billing-reports.component';
 
 const BillableServiceHome: React.FC = () => {
   const { t } = useTranslation();
@@ -46,6 +47,9 @@ const BillableServiceHome: React.FC = () => {
                   </SideNavMenuItem>
                 </SideNavMenu>
               </UserHasAccess>
+              <SideNavLink onClick={() => handleNavigation('bill-report')} renderIcon={ReportData}>
+                {t('billReports', 'Billing Reports')}
+              </SideNavLink>
             </SideNavItems>
           </SideNav>
         </section>
@@ -57,6 +61,7 @@ const BillableServiceHome: React.FC = () => {
             <Route path="/waive-bill" element={<BillWaiver />} />
             <Route path="/cash-point-config" element={<CashPointConfiguration />} />
             <Route path="/payment-modes-config" element={<PaymentModesConfig />} />
+            <Route path="/bill-report" element={<BillingReports />} />
           </Routes>
         </section>
       </main>

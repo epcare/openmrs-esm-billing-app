@@ -1,0 +1,17 @@
+
+.datePicker{
+  display: flex;
+  width: fit-content;
+  margin: 1rem 0.5rem 0 auto;
+
+  :global(.cds--date-picker-container) {
+    margin-right: 1rem !important;
+  }
+}
+
+.updateTransaction {
+  align-items: center;
+  svg {
+    margin-right: 0.5rem;
+  }
+}
