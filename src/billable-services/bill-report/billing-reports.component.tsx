@@ -64,10 +64,20 @@ const BillingReports = () => {
         date: formatDate(parseDate(item.dateCreated), { mode: 'standard', noToday: true, time: true }),
         name: item?.patient?.display.split('-')?.[1],
         identifier: item?.patient?.display.split('-')?.[0],
-        billedItems: item?.lineItems?.map((bill) => bill?.item || bill?.billableService)?.join(', '),
+        billedItems: item?.lineItems
+          ?.map((bill) =>
+            bill?.item && bill?.quantity > 0 ? `${bill.item}(${bill.quantity})` : bill?.billableService || null,
+          )
+          ?.filter(Boolean)
+          ?.join(', '),
         amount: item?.payments?.[0]?.amount.toLocaleString(),
         status: item?.status,
-        mode: item?.payments?.map((payment) => payment?.instanceType?.name)?.join(' & '),
+        mode:
+          item?.payments?.length > 1
+            ? item?.payments
+                ?.map((payment) => `${payment?.instanceType?.name} (${payment?.amountTendered.toLocaleString()})`)
+                ?.join(' & ')
+            : item?.payments?.[0]?.instanceType?.name,
       });
     });
 
