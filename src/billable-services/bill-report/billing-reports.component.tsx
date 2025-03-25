@@ -61,7 +61,7 @@ const BillingReports = () => {
 
     filteredArray?.forEach((item) => {
       dataArray.push({
-        date: formatDate(parseDate(item.dateCreated), { mode: 'standard', noToday: true, time: true }),
+        date: formatDate(parseDate(item.dateCreated), { mode: 'standard', noToday: true, time: false }),
         name: item?.patient?.display.split('-')?.[1],
         identifier: item?.patient?.display.split('-')?.[0],
         billedItems: item?.lineItems
