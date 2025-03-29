@@ -23,7 +23,7 @@ export const useBillableServices = () => {
 
 export function useServiceTypes() {
   const config = useConfig();
-  const serviceConceptUuid = config.serviceTypes.billableService;
+  const serviceConceptUuid = config.serviceTypes;
   const url = `${restBaseUrl}/concept/${serviceConceptUuid}?v=custom:(setMembers:(uuid,display))`;
 
   const { data, error, isLoading } = useSWR<{ data }>(url, openmrsFetch);

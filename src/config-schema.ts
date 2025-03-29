@@ -46,11 +46,9 @@ export const configSchema = {
   },
 
   serviceTypes: {
-    _type: Type.Object,
+    _type: Type.String,
     _description: 'Post Bill Items such as cashPoints, cashier, priceUUid when submitting a bill',
-    _default: {
-      billableService: '21b8cf43-9f9f-4d02-9f4a-d710ece54261',
-    },
+    _default: '21b8cf43-9f9f-4d02-9f4a-d710ece54261',
   },
 
   defaultCurrency: {
@@ -80,6 +78,6 @@ export interface ConfigObject {
   object;
   showEditBillButton: boolean;
   postBilledItems: Object;
-  serviceTypes: Object;
+  serviceTypes: string;
   nonPayingPatientCategories: Object;
 }
