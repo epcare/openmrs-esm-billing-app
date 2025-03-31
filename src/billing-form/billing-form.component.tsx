@@ -151,14 +151,23 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
 
     const preprocessedData = res?.results
       ?.map((item) => {
-        return {
-          uuid: item.uuid || '',
-          Item: item.commonName ? item.commonName : item.name,
-          Qnty: 1,
-          Price: item.commonName ? item?.purchasePrice : item.servicePrices[0]?.price,
-          Total: item.commonName ? item?.purchasePrice : item.servicePrices[0]?.price,
-          category: item.commonName ? 'StockItem' : 'Service',
-        };
+        return category === 'Stock Item'
+          ? {
+              uuid: item?.uuid || '',
+              Item: item?.drugName ? item?.drugName : item?.commonName,
+              Qnty: 1,
+              Price: item?.drugName ? item?.purchasePrice : 0,
+              Total: item?.drugName ? item?.purchasePrice : 0,
+              category: 'StockItem',
+            }
+          : {
+              uuid: item?.uuid || '',
+              Item: item?.name ? item?.name : '',
+              Qnty: 1,
+              Price: item?.servicePrices.length > 0 ? item?.servicePrices[0]?.price : 0,
+              Total: item?.servicePrices.length > 0 ? item?.servicePrices[0]?.price : 0,
+              category: 'Service',
+            };
       })
       .filter((item) => !existingItemUuids.has(item.uuid));
 
@@ -170,7 +179,7 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
           .sort((r1, r2) => r1.score - r2.score)
           .map((result) => result.original)
       : searchOptions;
-  }, [debouncedSearchTerm, isLoading, error, data, billItems, searchOptions]);
+  }, [debouncedSearchTerm, isLoading, error, data, billItems, searchOptions, category]);
 
   useEffect(() => {
     setSearchOptions(filterItems);
@@ -266,7 +275,7 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
                   <Button
                     id={row.uuid}
                     onClick={(e) => addItemToBill(e, row.uuid, row.Item, row.category, row.Price)}
-                    style={{ background: 'inherit', color: 'black' }}>
+                    style={{ background: 'inherit', color: 'black', 'max-width': '100%' }}>
                     {row.Item} Qnty.{row.Qnty} {defaultCurrency}.{row.Price}
                   </Button>
                 </li>
