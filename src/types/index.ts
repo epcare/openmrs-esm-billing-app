@@ -173,8 +173,7 @@ export type BillabeItem = {
   id?: number;
   name?: string;
   commonName?: string;
-  drugName?;
-  string;
+  drugName?: string;
   servicePrices?: ServicePrice[];
   purchasePrice?: number;
 };
