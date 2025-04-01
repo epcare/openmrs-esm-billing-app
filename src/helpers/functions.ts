@@ -36,7 +36,7 @@ export const convertToCurrency = (amountToConvert: number, currencyType?: string
   const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currencyType,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
   });
 
   let formattedAmount = formatter.format(Math.abs(amountToConvert));

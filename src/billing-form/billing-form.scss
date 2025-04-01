@@ -48,6 +48,10 @@
 
 .invalidInput {
   border: 2px solid red;
+
+  :global(.cds--text-input:focus) {
+    outline-color: transparent;
+  }
 }
 
 .removeButton {
