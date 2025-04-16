@@ -30,7 +30,7 @@ const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ bill, patient, faci
   const layout = useLayoutType();
   const responsiveSize = isDesktop(layout) ? 'sm' : 'lg';
   const headerData = [
-    { header: 'Inventory item', key: 'billItem' },
+    { header: 'Billable item', key: 'billItem' },
     { header: 'Quantity', key: 'quantity' },
     { header: 'Unit price', key: 'price' },
     { header: 'Total', key: 'total' },
