@@ -23,6 +23,7 @@ const testProps = {
     age: '45',
     gender: 'Male',
   },
+  facility: 'Test Facility',
 };
 
 describe('PrintableInvoiceHeader', () => {

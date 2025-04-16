@@ -21,10 +21,11 @@ import styles from './printable-invoice.scss';
 type PrintableInvoiceProps = {
   bill: MappedBill;
   patient: fhir.Patient;
+  facility: string;
   isLoading: boolean;
 };
 
-const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ bill, patient, isLoading }) => {
+const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ bill, patient, facility, isLoading }) => {
   const { t } = useTranslation();
   const layout = useLayoutType();
   const responsiveSize = isDesktop(layout) ? 'sm' : 'lg';
@@ -39,7 +40,7 @@ const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ bill, patient, isLo
     bill?.lineItems?.map((item) => {
       return {
         id: `${item.uuid}`,
-        billItem: item.item,
+        billItem: item?.item || item?.billableService,
         quantity: item.quantity,
         price: item.price,
         total: item.price * item.quantity,
@@ -86,7 +87,7 @@ const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ bill, patient, isLo
 
   return (
     <div className={styles.container}>
-      <PrintableInvoiceHeader patientDetails={patientDetails} />
+      <PrintableInvoiceHeader patientDetails={patientDetails} facility={facility} />
       <div className={styles.printableInvoiceContainer}>
         <div className={styles.detailsContainer}>
           {Object.entries(invoiceDetails).map(([key, val]) => (
