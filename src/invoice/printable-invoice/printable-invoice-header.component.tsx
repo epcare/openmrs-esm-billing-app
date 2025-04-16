@@ -11,7 +11,7 @@ interface PrintableInvoiceHeaderProps {
 const PrintableInvoiceHeader: React.FC<PrintableInvoiceHeaderProps> = ({ patientDetails, facility }) => {
   const { t } = useTranslation();
   const { logo } = useConfig({ externalModuleName: '@ugandaemr/esm-login-app' });
-  const { sessionLocation, user } = useSession();
+  const { sessionLocation } = useSession();
   const location = sessionLocation?.display;
 
   return (

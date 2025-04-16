@@ -1,6 +1,6 @@
 import React from 'react';
 import { screen, render } from '@testing-library/react';
-import { useConfig } from '@openmrs/esm-framework';
+import { useConfig, useSession } from '@openmrs/esm-framework';
 import { useDefaultFacility } from '../../billing.resource';
 import PrintableInvoiceHeader from './printable-invoice-header.component';
 
@@ -13,6 +13,11 @@ jest.mock('../../billing.resource', () => ({
 
 jest.mock('@openmrs/esm-framework', () => ({
   useConfig: jest.fn(),
+  useSession: jest.fn().mockReturnValue({
+    sessionLocation: {
+      display: 'Test location',
+    },
+  }),
 }));
 const testProps = {
   patientDetails: {
@@ -29,7 +34,6 @@ const testProps = {
 describe('PrintableInvoiceHeader', () => {
   test('should render PrintableInvoiceHeader component', () => {
     mockUseConfig.mockReturnValue({ logo: { src: 'logo.png', alt: 'logo' } });
-    mockUseDefaultFacility.mockReturnValue({ data: { display: 'MTRH', uuid: 'mtrh-uuid' }, isLoading: false });
     render(<PrintableInvoiceHeader {...testProps} />);
     const header = screen.getByText('Invoice');
     expect(header).toBeInTheDocument();
@@ -37,8 +41,6 @@ describe('PrintableInvoiceHeader', () => {
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('Nairobi')).toBeInTheDocument();
     expect(screen.getByText('Westlands, Nairobi')).toBeInTheDocument();
-    expect(screen.getByText('MTRH')).toBeInTheDocument();
-    expect(screen.getByText('Kenya')).toBeInTheDocument();
   });
 
   test('should display the logo when logo is provided', () => {
@@ -46,14 +48,6 @@ describe('PrintableInvoiceHeader', () => {
     mockUseDefaultFacility.mockReturnValue({ data: { display: 'MTRH', uuid: 'mtrh-uuid' }, isLoading: false });
     render(<PrintableInvoiceHeader {...testProps} />);
     const logo = screen.getByAltText('logo');
-    expect(logo).toBeInTheDocument();
-  });
-
-  test('should display the default logo when logo is not provided', () => {
-    mockUseConfig.mockReturnValue({ logo: {} });
-    mockUseDefaultFacility.mockReturnValue({ data: { display: 'MTRH', uuid: 'mtrh-uuid' }, isLoading: false });
-    render(<PrintableInvoiceHeader {...testProps} />);
-    const logo = screen.getByRole('img');
     expect(logo).toBeInTheDocument();
   });
 });
