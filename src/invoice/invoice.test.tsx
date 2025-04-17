@@ -3,7 +3,7 @@ import { screen, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useReactToPrint } from 'react-to-print';
 import { mockBill } from '../../__mocks__/bills.mock';
-import { useBill, processBillPayment } from '../billing.resource';
+import { useBill, processBillPayment, useFacilityName } from '../billing.resource';
 import { usePaymentModes } from './payments/payment.resource';
 import Invoice from './invoice.component';
 
@@ -62,6 +62,10 @@ jest.mock('../billing.resource', () => ({
   useDefaultFacility: jest.fn().mockReturnValue({
     uuid: '54065383-b4d4-42d2-af4d-d250a1fd2590',
     display: 'MTRH',
+  }),
+  useFacilityName: jest.fn().mockReturnValue({
+    facility: 'test facility',
+    isLoadingFacility: true,
   }),
 }));
 

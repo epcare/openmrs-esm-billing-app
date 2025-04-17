@@ -197,3 +197,15 @@ export const useGetills = () => {
     mutate,
   };
 };
+
+export function useFacilityName() {
+  const apiURL = `${restBaseUrl}/systemsetting/ugandaemr.healthCenterName`;
+
+  const { data, error, isLoading } = useSWR<{ data }, Error>(apiURL, openmrsFetch);
+
+  return {
+    facility: data?.data?.value ?? '',
+    isLoadingFacility: isLoading,
+    isError: error,
+  };
+}

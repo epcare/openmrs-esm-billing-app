@@ -8,7 +8,7 @@ import { ExtensionSlot, useConfig, usePatient } from '@openmrs/esm-framework';
 import { ErrorState } from '@openmrs/esm-patient-common-lib';
 import { convertToCurrency } from '../helpers';
 import { type LineItem } from '../types';
-import { useBill } from '../billing.resource';
+import { useBill, useFacilityName } from '../billing.resource';
 import InvoiceTable from './invoice-table.component';
 import Payments from './payments/payments.component';
 import PrintReceipt from './printable-invoice/print-receipt.component';
@@ -30,6 +30,7 @@ const Invoice: React.FC = () => {
   const componentRef = useRef<HTMLDivElement>(null);
   const onBeforeGetContentResolve = useRef<(() => void) | null>(null);
   const { defaultCurrency } = useConfig();
+  const { facility, isLoadingFacility } = useFacilityName();
   const handleSelectItem = (lineItems: LineItem[]) => {
     setSelectedLineItems(lineItems);
   };
@@ -77,7 +78,7 @@ const Invoice: React.FC = () => {
     'Invoice Status': bill?.status,
   };
 
-  if (isLoadingPatient && isLoadingBill) {
+  if (isLoadingPatient && isLoadingBill && isLoadingFacility) {
     return (
       <div className={styles.invoiceContainer}>
         <InlineLoading
@@ -124,7 +125,9 @@ const Invoice: React.FC = () => {
       <Payments bill={bill} mutate={mutate} selectedLineItems={selectedLineItems} />
 
       <div className={styles.printContainer} ref={componentRef}>
-        {isPrinting && <PrintableInvoice bill={bill} patient={patient} isLoading={isLoadingPatient} />}
+        {isPrinting && (
+          <PrintableInvoice bill={bill} patient={patient} facility={facility} isLoading={isLoadingPatient} />
+        )}
       </div>
     </div>
   );
