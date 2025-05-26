@@ -26,6 +26,7 @@ import {
 } from '../billable-service.resource';
 import { type ServiceConcept } from '../../types';
 import styles from './add-billable-service.scss';
+import { apiBasePath, handleMutate } from '../../constants';
 
 type PaymentMode = {
   paymentMode: string;
@@ -91,11 +92,6 @@ const AddBillableService: React.FC<{ editingService?: any; onClose: () => void }
     setSelectedConcept(selectedConcept);
   }, []);
 
-  const handleNavigateToServiceDashboard = () =>
-    navigate({
-      to: window.getOpenmrsSpaBase() + 'billable-services',
-    });
-
   useEffect(() => {
     if (editingService && !isLoadingPaymentModes) {
       setBillableServicePayload(editingService);
@@ -151,8 +147,8 @@ const AddBillableService: React.FC<{ editingService?: any; onClose: () => void }
           kind: 'success',
           timeoutInMs: 3000,
         });
+        handleMutate(`${apiBasePath}billableService`);
         onClose();
-        handleNavigateToServiceDashboard();
       },
       (error) => {
         showSnackbar({ title: t('billPaymentError', 'Bill payment error'), kind: 'error', subtitle: error?.message });
