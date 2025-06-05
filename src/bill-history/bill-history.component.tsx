@@ -161,7 +161,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
                         {row.isExpanded ? (
                           <TableExpandedRow className={styles.expandedRow} colSpan={headers.length + 1}>
                             <div className={styles.container} key={i}>
-                              <InvoiceTable bill={currentBill} isSelectable={false} />
+                              <InvoiceTable bill={currentBill} isSelectable={false} hasActions={false} />
                             </div>
                           </TableExpandedRow>
                         ) : (

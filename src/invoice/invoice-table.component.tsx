@@ -29,9 +29,16 @@ type InvoiceTableProps = {
   isSelectable?: boolean;
   isLoadingBill?: boolean;
   onSelectItem?: (selectedLineItems: LineItem[]) => void;
+  hasActions?: boolean;
 };
 
-const InvoiceTable: React.FC<InvoiceTableProps> = ({ bill, isSelectable = true, isLoadingBill, onSelectItem }) => {
+const InvoiceTable: React.FC<InvoiceTableProps> = ({
+  bill,
+  isSelectable = true,
+  isLoadingBill,
+  onSelectItem,
+  hasActions = true,
+}) => {
   const { t } = useTranslation();
   const { defaultCurrency, showEditBillButton } = useConfig();
   const layout = useLayoutType();
@@ -72,7 +79,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({ bill, isSelectable = true, 
     { header: 'Quantity', key: 'quantity', width: 15 },
     { header: 'Price', key: 'price', width: 24 },
     { header: 'Total', key: 'total', width: 15 },
-    { header: t('actions', 'Actions'), key: 'actionButton' },
+    hasActions ? { header: t('actions', 'Actions'), key: 'actionButton' } : {},
   ];
 
   const handleSelectBillItem = useCallback(

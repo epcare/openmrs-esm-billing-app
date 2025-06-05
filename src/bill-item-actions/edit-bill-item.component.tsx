@@ -18,10 +18,11 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { showSnackbar } from '@openmrs/esm-framework';
 import { apiBasePath } from '../constants';
-import { getBillableServiceUuid } from '../invoice/payments/utils';
+import { getBillableServiceUuid, getStockItemUuid } from '../invoice/payments/utils';
 import { type LineItem, type MappedBill } from '../types';
-import { updateBillItems } from '../billing.resource';
+import { updateBillItems, useStockItems } from '../billing.resource';
 import { useBillableServices } from '../billable-services/billable-service.resource';
+
 import styles from './bill-item-actions.scss';
 
 interface BillLineItemProps {
@@ -35,6 +36,7 @@ const ChangeStatus: React.FC<BillLineItemProps> = ({ bill, item, closeModal }) =
   const { billableServices } = useBillableServices();
   const [showErrorNotification, setShowErrorNotification] = useState(false);
   const [total, setTotal] = useState(0);
+  const { stockItems, isLoadingItem } = useStockItems();
 
   const schema = useMemo(
     () =>
@@ -82,7 +84,7 @@ const ChangeStatus: React.FC<BillLineItemProps> = ({ bill, item, closeModal }) =
       quantity: parseInt(data.quantity),
       price: parseInt(data?.price),
       billableService: getBillableServiceUuid(billableServices, item.billableService),
-      item: item?.item,
+      item: getStockItemUuid(stockItems, item?.item),
     };
 
     const previousLineitems = bill?.lineItems
@@ -90,6 +92,7 @@ const ChangeStatus: React.FC<BillLineItemProps> = ({ bill, item, closeModal }) =
       .map((currItem) => ({
         ...currItem,
         billableService: getBillableServiceUuid(billableServices, item.billableService),
+        item: getStockItemUuid(stockItems, item?.item),
       }));
     const updatedLineItems = previousLineitems.concat(newItem);
 
@@ -154,6 +157,7 @@ const ChangeStatus: React.FC<BillLineItemProps> = ({ bill, item, closeModal }) =
                     max={100}
                     value={value}
                     onChange={onChange}
+                    hideSteppers={true}
                     className={styles.controlField}
                     invalid={errors.quantity?.message}
                     invalidText={errors.quantity?.message}

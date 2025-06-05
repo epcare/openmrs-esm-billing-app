@@ -70,6 +70,6 @@ export const createPaymentPayload = (
 export const getBillableServiceUuid = (billableServices: Array<any>, serviceName: string) => {
   return billableServices.length ? billableServices.find((service) => service.name === serviceName)?.uuid : null;
 };
-const getStockItemUuid = (stockItems: Array<any>, itemName: string) => {
+export const getStockItemUuid = (stockItems: Array<any>, itemName: string) => {
   return stockItems.length ? stockItems.find((item) => item?.conceptName === itemName)?.uuid : null;
 };

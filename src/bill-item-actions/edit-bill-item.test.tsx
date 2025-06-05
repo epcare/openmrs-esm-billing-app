@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { showSnackbar } from '@openmrs/esm-framework';
 import { type MappedBill } from '../types';
-import { updateBillItems } from '../billing.resource';
+import { updateBillItems, useStockItems } from '../billing.resource';
 import ChangeStatus from './edit-bill-item.component';
 
 // Mock external dependencies
@@ -18,6 +18,11 @@ jest.mock('../billable-services/billable-service.resource', () => ({
   useBillableServices: jest.fn(() => ({
     billableServices: [],
   })),
+}));
+
+jest.mock('../billing.resource', () => ({
+  useStockItems: jest.fn(),
+  updateBillItems: jest.fn(),
 }));
 
 const mockBill: MappedBill = {
@@ -79,6 +84,7 @@ describe('ChangeStatus component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (useStockItems as jest.Mock).mockReturnValue({ stockItems: [], isLoadingItem: false });
   });
 
   test('renders the form with correct fields and default values', () => {
