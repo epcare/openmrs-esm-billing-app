@@ -18,7 +18,7 @@ import {
   TableRow,
   Tile,
 } from '@carbon/react';
-import { isDesktop, useConfig, useLayoutType, usePagination } from '@openmrs/esm-framework';
+import { isDesktop, launchWorkspace, useConfig, useLayoutType, usePagination } from '@openmrs/esm-framework';
 import {
   CardHeader,
   EmptyDataIllustration,
@@ -103,7 +103,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
             <EmptyDataIllustration />
           </div>
           <p className={styles.content}>There are no bills to display.</p>
-          <Button onClick={() => launchPatientWorkspace('billing-form-workspace')} kind="ghost">
+          <Button onClick={() => launchWorkspace('billing-form-workspace')} kind="ghost">
             {t('launchBillForm', 'Launch bill form')}
           </Button>
         </Tile>
