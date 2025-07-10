@@ -1,4 +1,4 @@
-name: UgandaEMR CI
+name: EMR CI
 
 on:
   push:
@@ -10,19 +10,19 @@ on:
       - created
 
 env:
-  ESM_NAME: "@ugandaemr/esm-billing-app"
-  JS_NAME: "ugandaemr-esm-billing-app.js"
+  ESM_NAME: "@epcare/esm-billing-app"
+  JS_NAME: "epcare-esm-billing-app.js"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "18.x"
+          node-version: "20"
       - run: yarn install --immutable
       - run: yarn verify
       - run: yarn build
@@ -42,18 +42,18 @@ jobs:
 
     steps:
       - run: echo "Uncomment the lines below and delete this one."
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Download Artifacts
         uses: actions/download-artifact@v4
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18.x"
           registry-url: "https://registry.npmjs.org"
       - run: yarn install --immutable
       - run: yarn version "$(node -e "console.log(require('semver').inc(require('./package.json').version, 'patch'))")-pre.${{ github.run_number }}"
       - run: yarn build
-      - run: git config user.email "<>" && git config user.name "UgandaEMR CI"
+      - run: git config user.email "<>" && git config user.name "EMR CI"
       - run: git add . && git commit -m "Prerelease version" --no-verify
       - run: yarn config set npmAuthToken "${NODE_AUTH_TOKEN}" && yarn npm publish --access public --tag next
         env:
@@ -74,13 +74,13 @@ jobs:
     if: ${{ github.event_name == 'release' }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download Artifacts
         uses: actions/download-artifact@v4
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "18.x"
+          node-version: "20"
           registry-url: 'https://registry.npmjs.org'
       - run: yarn install --immutable
       - run: yarn config set npmAuthToken "${NODE_AUTH_TOKEN}" &&  yarn npm publish
