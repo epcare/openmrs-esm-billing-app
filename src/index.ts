@@ -13,7 +13,7 @@ import RootComponent from './root.component';
 import ServiceMetrics from './billable-services/dashboard/service-metrics.component';
 import VisitAttributeTags from './invoice/payments/visit-tags/visit-attribute.component';
 
-const moduleName = '@ugandaemr/esm-billing-app';
+const moduleName = '@epcare/esm-billing-app';
 
 const options = {
   featureName: 'billing',

@@ -12,6 +12,7 @@ const BillingReports = () => {
   const currentDate = new Date();
   const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
   const [dateArray, setDateArray] = useState([startOfMonth, endOfMonth]);
   const [data, setData] = useState([]);
   const [hasUpdatedBillData, setHasUpdatedBillData] = useState(true);
@@ -49,7 +50,10 @@ const BillingReports = () => {
   ];
 
   const handleOnChangeRange = (dates: Array<Date>) => {
-    setDateArray(dates);
+    const start = dates[0];
+    const end = new Date(dates[1]);
+    end.setHours(23, 59, 59, 999);
+    setDateArray([start, end]);
   };
 
   const processBillReport = useCallback(() => {
