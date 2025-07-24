@@ -168,11 +168,13 @@ export type ServiceConcept = {
   display: string;
 };
 
-export type BillabeItem = {
+export type BillableItem = {
   uuid: string;
   id?: number;
   name?: string;
   commonName?: string;
+  conceptName?: string;
+  drugUuid?: string;
   drugName?: string;
   servicePrices?: ServicePrice[];
   purchasePrice?: number;

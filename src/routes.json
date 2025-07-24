@@ -87,6 +87,10 @@
     {
       "name": "require-billing-modal",
       "component": "requirePaymentModal"
+    },
+    {
+      "name": "charge-item-modal",
+      "component": "chargeItemsModal"
     }
   ],
   "workspaces": [
@@ -94,6 +98,14 @@
       "name": "billing-form-workspace",
       "title": "billingForm",
       "component": "billingFormWorkspace",
+      "type": "form",
+      "width": "extra-wide",
+      "canMaximize": true
+    },
+    {
+      "name": "charge-item-workspace",
+      "title": "chargeItem",
+      "component": "chargeItemsFormWorkspace",
       "type": "form",
       "width": "extra-wide",
       "canMaximize": true

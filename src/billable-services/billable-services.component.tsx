@@ -20,8 +20,17 @@ import {
   TableRow,
   Tile,
 } from '@carbon/react';
-import { ArrowRight } from '@carbon/react/icons';
-import { useLayoutType, isDesktop, useConfig, usePagination, ErrorState, navigate } from '@openmrs/esm-framework';
+import { ArrowRight, OverflowMenuVertical } from '@carbon/react/icons';
+import {
+  useLayoutType,
+  isDesktop,
+  useConfig,
+  usePagination,
+  ErrorState,
+  navigate,
+  launchWorkspace,
+  showModal,
+} from '@openmrs/esm-framework';
 import { EmptyState } from '@openmrs/esm-patient-common-lib';
 import { type BillableService } from '../types/index';
 import { useBillableServices } from './billable-service.resource';
@@ -140,6 +149,13 @@ const BillableServices = () => {
     setEditingService(null);
   }, []);
 
+  const launchChargeItemModal = useCallback(() => {
+    const dispose = showModal('charge-item-modal', {
+      closeModal: () => dispose(),
+      size: 'sm',
+    });
+  }, []);
+
   if (isLoading) {
     <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }
@@ -159,6 +175,7 @@ const BillableServices = () => {
       {billableServices?.length > 0 ? (
         <div className={styles.serviceContainer}>
           <FilterableTableHeader
+            handleClick={launchChargeItemModal}
             handleSearch={handleSearch}
             isValidating={isValidating}
             layout={layout}
@@ -255,7 +272,7 @@ const BillableServices = () => {
   );
 };
 
-function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t }) {
+function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, handleClick }) {
   return (
     <>
       <div className={styles.headerContainer}>
@@ -264,7 +281,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
             [styles.tabletHeading]: !isDesktop(layout),
             [styles.desktopHeading]: isDesktop(layout),
           })}>
-          <h4>{t('servicesList', 'Services list')}</h4>
+          <h4>{t('chargeAndservicesList', 'Charge Items and Services list')}</h4>
         </div>
         <div className={styles.backgroundDataFetchingIndicator}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
@@ -277,16 +294,23 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           onChange={handleSearch}
           size={responsiveSize}
         />
-        <Button
-          size={responsiveSize}
-          kind="primary"
-          renderIcon={(props) => <ArrowRight size={16} {...props} />}
-          onClick={() => {
-            navigate({ to: window.getOpenmrsSpaBase() + 'billable-services/add-service' });
-          }}
-          iconDescription={t('addNewBillableService', 'Add new billable service')}>
-          {t('addNewService', 'Add new service')}
-        </Button>
+        <OverflowMenu
+          renderIcon={() => (
+            <>
+              Actions Menu&nbsp;&nbsp;
+              <OverflowMenuVertical size={16} />
+            </>
+          )}
+          menuOffset={{ right: '-100px' }}
+          className={styles.newOverflowMenu}>
+          <OverflowMenuItem
+            itemText={t('addNewService', 'Add charge service')}
+            onClick={() => {
+              navigate({ to: window.getOpenmrsSpaBase() + 'billable-services/add-service' });
+            }}
+          />
+          <OverflowMenuItem itemText={t('addNewChargeItem', 'Add charge item')} onClick={handleClick} />
+        </OverflowMenu>
       </div>
     </>
   );
