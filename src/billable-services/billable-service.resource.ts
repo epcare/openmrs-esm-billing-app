@@ -1,7 +1,7 @@
 import useSWR from 'swr';
 import { type OpenmrsResource, openmrsFetch, restBaseUrl, useOpenmrsFetchAll, useConfig } from '@openmrs/esm-framework';
 import { type ServiceConcept } from '../types';
-import { apiBasePath } from '../constants';
+import { apiBasePath, serviceConceptUuid } from '../constants';
 import { type BillableService } from '../types/index';
 
 type ResponseObject = {
@@ -22,14 +22,12 @@ export const useBillableServices = () => {
 };
 
 export function useServiceTypes() {
-  const config = useConfig();
-  const serviceConceptUuid = config.serviceTypes;
   const url = `${restBaseUrl}/concept/${serviceConceptUuid}?v=custom:(setMembers:(uuid,display))`;
 
   const { data, error, isLoading } = useSWR<{ data }>(url, openmrsFetch);
 
   return {
-    serviceTypes: data?.data.setMembers ?? [],
+    serviceTypes: data?.data?.setMembers ?? [],
     error,
     isLoading,
   };
@@ -70,6 +68,22 @@ export function useConceptsSearch(conceptToLookup: string) {
     searchResults: data?.data?.results ?? [],
     error: error,
     isSearching: isLoading,
+  };
+}
+
+export function useBillableServicesAndItems() {
+  const apiURL = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,concept:(uuid,display,name:(name)),serviceType:(display),servicePrices:(uuid,name,price,paymentMode:(uuid,name)))`;
+
+  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<BillableService> } }, Error>(
+    apiURL,
+    openmrsFetch,
+  );
+
+  return {
+    billableServicesAndItems: data?.data?.results ?? [],
+    error,
+    isLoading,
+    isValidating,
   };
 }
 

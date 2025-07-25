@@ -1,40 +1,163 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Controller, useForm } from 'react-hook-form';
-import { Button, Form, InlineNotification, ModalBody, ModalFooter, ModalHeader, Search, Stack , Layer } from '@carbon/react';
-import { useDebounce, useLayoutType } from '@openmrs/esm-framework';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import {
+  Button,
+  Form,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  Search,
+  Layer,
+  InlineLoading,
+  Tile,
+  FormLabel,
+  Section,
+  Dropdown,
+  TextInput,
+} from '@carbon/react';
+import { showSnackbar, useDebounce, useLayoutType } from '@openmrs/esm-framework';
 import styles from './charge-items-form.scss';
-import { type BillableItem } from '../../types';
+import { type StockItem } from '../../types';
+import { useFetchChargeItems } from '../../billing.resource';
+import { Add, TrashCan, WarningFilled } from '@carbon/react/icons';
+import { z } from 'zod';
+import {
+  createBillableSerice,
+  updateBillableService,
+  usePaymentModes,
+  useServiceTypes,
+} from '../billable-service.resource';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { handleMutate, apiBasePath } from '../../constants';
 
 interface ChargeItemFormProps {
   close(): () => void;
+  editingItem: any;
 }
 
-const ChargeItemForm: React.FC<ChargeItemFormProps> = ({ close }) => {
+const DEFAULT_PAYMENT_OPTION = { paymentMode: '', price: 0 };
+
+const ChargeItemForm: React.FC<ChargeItemFormProps> = ({ close, editingItem }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
-  const [selectedItem, setSelectedItem] = useState<BillableItem>(null);
+
+  const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [errorMessage, setErrorMessage] = useState(null);
+  const { serviceTypes, isLoading: isLoadingServicesTypes } = useServiceTypes();
+
   const debouncedSearchTerm = useDebounce(searchTerm);
 
+  const { searchResults, error, isLoading } = useFetchChargeItems(debouncedSearchTerm);
   const searchInputRef = useRef(null);
   const handleSearchTermChange = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
+  const { paymentModes, isLoading: isLoadingPaymentModes } = usePaymentModes();
+  const servicePriceSchema = z.object({
+    paymentMode: z.string().refine((value) => !!value, 'Payment method is required'),
+    price: z.union([
+      z.number().refine((value) => !!value, 'Price is required'),
+      z.string().refine((value) => !!value, 'Price is required'),
+    ]),
+  });
+  const paymentFormSchema = z.object({
+    payment: z.array(servicePriceSchema).min(1, 'At least one payment option is required'),
+  });
 
   const {
     control,
+    handleSubmit,
     formState: { errors },
-  } = useForm<{ search: string }>({
+  } = useForm({
     defaultValues: {
       search: '',
+      payment: editingItem?.servicePrices || DEFAULT_PAYMENT_OPTION,
+      serviceType: editingItem?.serviceType,
     },
+    resolver: zodResolver(paymentFormSchema),
   });
 
+  const { fields, remove, append } = useFieldArray({ name: 'payment', control: control });
+
+  const handleAppendPaymentMode = useCallback(() => append(DEFAULT_PAYMENT_OPTION), [append]);
+  const handleRemovePaymentMode = useCallback((index) => remove(index), [remove]);
+
+  const handleChargeItemChange = useCallback((selectedItem: any) => {
+    setSelectedItem(selectedItem);
+  }, []);
+
+  const getPaymentErrorMessage = () => {
+    const paymentError = errors.payment;
+    if (paymentError && typeof paymentError.message === 'string') {
+      return paymentError.message;
+    }
+    return null;
+  };
+
+  const onSubmit = (data) => {
+    const dispensingServiceType = serviceTypes?.find((type) => type.display?.toLowerCase() === 'dispensing');
+
+    const commonName = searchResults?.map((name) => name?.commonName);
+
+    if (!selectedItem) {
+      showSnackbar({
+        title: t('missingItem', 'Missing item'),
+        subtitle: t('pleaseSelectAnItem', 'Please select a commodity before submitting'),
+        kind: 'error',
+      });
+      return;
+    }
+
+    if (!dispensingServiceType) {
+      showSnackbar({
+        title: t('error', 'Error'),
+        subtitle: t('serviceTypeNotFound', 'Dispensing service type not found'),
+        kind: 'error',
+      });
+      return;
+    }
+    const payload = {
+      name: selectedItem?.drugName,
+      shortName: selectedItem?.commonName,
+      servicePrices: data.payment.map((payment) => {
+        const mode = paymentModes.find((m) => m.uuid === payment.paymentMode);
+        return {
+          paymentMode: payment.paymentMode,
+          name: mode?.name || 'Unknown',
+          price: parseFloat(payment.price),
+        };
+      }),
+      serviceType: dispensingServiceType.uuid,
+      serviceStatus: 'ENABLED',
+      concept: selectedItem?.uuid,
+    };
+
+    const saveAction = editingItem ? updateBillableService(editingItem.uuid, payload) : createBillableSerice(payload);
+
+    saveAction.then(
+      (resp) => {
+        showSnackbar({
+          title: t('billableService', 'Billable service'),
+          subtitle: editingItem
+            ? t('updatedSuccessfully', 'Billable service updated successfully')
+            : t('createdSuccessfully', 'Billable service created successfully'),
+          kind: 'success',
+          timeoutInMs: 3000,
+        });
+        handleMutate(`${apiBasePath}billableService`);
+        close();
+      },
+      (error) => {
+        showSnackbar({ title: t('billPaymentError', 'Bill payment error'), kind: 'error', subtitle: error?.message });
+      },
+    );
+  };
+
   return (
-    <Form>
-      <ModalHeader closeModal={close} title={t('searchItem', 'Search Billable Item')} />
-      <ModalBody>
-        <Stack gap={5} className={styles.languageOptionsContainer}>
+    <Form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+      <ModalHeader closeModal={close} title={t('createBillableItem', 'Create Billable Item')} />
+      <ModalBody hasScrollingContent={true}>
+        <Section>
+          <FormLabel className={styles.conceptLabel}>Search for commodity</FormLabel>
           <Controller
             name="search"
             control={control}
@@ -44,13 +167,15 @@ const ChargeItemForm: React.FC<ChargeItemFormProps> = ({ close }) => {
                   ref={searchInputRef}
                   size="md"
                   id="conceptsSearch"
-                  labelText={t('enterConcept', 'Associated concept')}
-                  placeholder={t('searchConcepts', 'Search associated concept')}
+                  labelText={t('enterItem', 'Billable Item')}
+                  placeholder={t('searchCommodity', 'Search for commodity')}
+                  className={errors?.search && styles.serviceError}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
                     onChange(e);
                     handleSearchTermChange(e);
                   }}
+                  renderIcon={errors?.search && <WarningFilled />}
                   onBlur={onBlur}
                   onClear={() => {
                     setSearchTerm('');
@@ -63,22 +188,96 @@ const ChargeItemForm: React.FC<ChargeItemFormProps> = ({ close }) => {
                     if (debouncedSearchTerm) {
                       return value;
                     }
-                    return '';
                   })()}
                 />
               </ResponsiveWrapper>
             )}
           />
 
-          {errorMessage && (
-            <InlineNotification
-              kind="error"
-              onClick={() => setErrorMessage(null)}
-              subtitle={errorMessage}
-              title={t('error', 'Error')}
-            />
-          )}
-        </Stack>
+          {(() => {
+            if (!debouncedSearchTerm || selectedItem) return null;
+            if (isLoading)
+              return <InlineLoading className={styles.loader} description={t('searching', 'Searching') + '...'} />;
+            if (searchResults && searchResults.length) {
+              return (
+                <ul className={styles.conceptsList}>
+                  {/*TODO: use uuid instead of index as the key*/}
+                  {searchResults?.map((searchResult, index) => (
+                    <li
+                      role="menuitem"
+                      className={styles.service}
+                      key={index}
+                      onClick={() => handleChargeItemChange(searchResult)}>
+                      {searchResult.drugName}
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+            return (
+              <Layer>
+                <Tile className={styles.emptyResults}>
+                  <span>
+                    {t('noResultsFor', 'No results for')} <strong>"{debouncedSearchTerm}"</strong>
+                  </span>
+                </Tile>
+              </Layer>
+            );
+          })()}
+        </Section>
+        <section>
+          <div className={styles.container}>
+            {fields.map((field, index) => (
+              <div key={field.id} className={styles.paymentMethodContainer}>
+                <Controller
+                  control={control}
+                  name={`payment.${index}.paymentMode`}
+                  render={({ field }) => (
+                    <Layer>
+                      <Dropdown
+                        onChange={({ selectedItem }) => field.onChange(selectedItem.uuid)}
+                        titleText={t('paymentMode', 'Payment Mode')}
+                        label={t('selectPaymentMethod', 'Select payment method')}
+                        items={paymentModes ?? []}
+                        itemToString={(item) => (item ? item.name : '')}
+                        selectedItem={paymentModes.find((mode) => mode.uuid === field.value)}
+                        invalid={!!errors?.payment?.[index]?.paymentMode}
+                        invalidText={errors?.payment?.[index]?.paymentMode?.message}
+                      />
+                    </Layer>
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name={`payment.${index}.price`}
+                  render={({ field }) => (
+                    <Layer>
+                      <TextInput
+                        {...field}
+                        invalid={!!errors?.payment?.[index]?.price}
+                        invalidText={errors?.payment?.[index]?.price?.message}
+                        labelText={t('sellingPrice', 'Selling Price')}
+                        placeholder={t('sellingAmount', 'Enter selling price')}
+                      />
+                    </Layer>
+                  )}
+                />
+                <div className={styles.removeButtonContainer}>
+                  <TrashCan onClick={() => handleRemovePaymentMode(index)} className={styles.removeButton} size={20} />
+                </div>
+              </div>
+            ))}
+            <Button
+              size="md"
+              onClick={handleAppendPaymentMode}
+              className={styles.paymentButtons}
+              renderIcon={(props) => <Add size={24} {...props} />}
+              iconDescription="Add">
+              {t('addPaymentOptions', 'Add payment option')}
+            </Button>
+            {getPaymentErrorMessage() && <div className={styles.errorMessage}>{getPaymentErrorMessage()}</div>}
+          </div>
+        </section>
       </ModalBody>
       <ModalFooter>
         <Button kind="secondary" onClick={close}>

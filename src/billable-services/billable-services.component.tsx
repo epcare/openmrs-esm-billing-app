@@ -33,19 +33,19 @@ import {
 } from '@openmrs/esm-framework';
 import { EmptyState } from '@openmrs/esm-patient-common-lib';
 import { type BillableService } from '../types/index';
-import { useBillableServices } from './billable-service.resource';
+import { useBillableServices, useBillableServicesAndItems } from './billable-service.resource';
 import AddBillableService from './create-edit/add-billable-service.component';
 import styles from './billable-services.scss';
 
 const BillableServices = () => {
   const { t } = useTranslation();
-  const { billableServices, isLoading, isValidating, error, mutate } = useBillableServices();
+  const { billableServicesAndItems, error, isLoading, isValidating } = useBillableServicesAndItems();
   const layout = useLayoutType();
   const config = useConfig();
   const [searchString, setSearchString] = useState('');
   const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
-  const pageSizes = config?.billableServices?.pageSizes ?? [10, 20, 30, 40, 50];
-  const [pageSize, setPageSize] = useState(config?.billableServices?.pageSize ?? 10);
+  const pageSizes = config?.billableServicesAndItems?.pageSizes ?? [10, 20, 30, 40, 50];
+  const [pageSize, setPageSize] = useState(config?.billableServicesAndItems?.pageSize ?? 10);
 
   const [showOverlay, setShowOverlay] = useState(false);
   const [editingService, setEditingService] = useState(null);
@@ -83,23 +83,7 @@ const BillableServices = () => {
     setShowOverlay(true);
   }, []);
 
-  const searchResults: BillableService[] = useMemo(() => {
-    const flatBillableServices = Array.isArray(billableServices) ? billableServices.flat() : billableServices;
-
-    if (flatBillableServices !== undefined && flatBillableServices.length > 0) {
-      if (searchString && searchString.trim() !== '') {
-        const search = searchString.toLowerCase();
-        return flatBillableServices.filter((service: BillableService) =>
-          Object.entries(service).some(([header, value]) => {
-            return header === 'uuid' ? false : `${value}`.toLowerCase().includes(search);
-          }),
-        );
-      }
-    }
-    return flatBillableServices;
-  }, [searchString, billableServices]);
-
-  const { paginated, goTo, results, currentPage } = usePagination<BillableService>(searchResults, pageSize);
+  const { paginated, goTo, results, currentPage } = usePagination<BillableService>(billableServicesAndItems, pageSize);
   const rowData = [];
 
   if (results) {
@@ -107,20 +91,18 @@ const BillableServices = () => {
       const s = {
         id: `${index}`,
         uuid: service.uuid,
-        serviceName: service.name,
-        shortName: service.shortName,
+        serviceName: service?.name,
+        shortName: service?.shortName,
         serviceType: service?.serviceType?.display,
         status: service.serviceStatus,
         prices: '--',
         actions: (
-          <TableCell>
-            <OverflowMenu size="sm" flipped>
-              <OverflowMenuItem
-                itemText={t('editBillableService', 'Edit Billable Service')}
-                onClick={() => handleEditService(service)}
-              />
-            </OverflowMenu>
-          </TableCell>
+          <OverflowMenu size="sm" flipped>
+            <OverflowMenuItem
+              itemText={t('editBillableService', 'Edit Billable Service')}
+              onClick={() => handleEditService(service)}
+            />
+          </OverflowMenu>
         ),
       };
       let cost = '';
@@ -157,22 +139,26 @@ const BillableServices = () => {
   }, []);
 
   if (isLoading) {
-    <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
+    return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }
+
   if (error) {
-    <ErrorState headerTitle={t('billableService', 'Billable Service')} error={error} />;
+    return <ErrorState headerTitle={t('billableService', 'Billable Service')} error={error} />;
   }
-  if (billableServices.length === 0) {
-    <EmptyState
-      displayText={t('billableService', 'Billable Service')}
-      headerTitle={t('billableService', 'Billable Service')}
-      launchForm={launchBillableServiceForm}
-    />;
+
+  if (billableServicesAndItems.length === 0) {
+    return (
+      <EmptyState
+        displayText={t('billableServices', 'Billable Services')}
+        headerTitle={t('billableService', 'Billable Service')}
+        launchForm={launchBillableServiceForm}
+      />
+    );
   }
 
   return (
     <>
-      {billableServices?.length > 0 ? (
+      {billableServicesAndItems?.length > 0 ? (
         <div className={styles.serviceContainer}>
           <FilterableTableHeader
             handleClick={launchChargeItemModal}
@@ -215,7 +201,7 @@ const BillableServices = () => {
               </TableContainer>
             )}
           </DataTable>
-          {searchResults?.length === 0 && (
+          {billableServicesAndItems?.length === 0 && (
             <div className={styles.filterEmptyState}>
               <Layer level={0}>
                 <Tile className={styles.filterEmptyStateTile}>
@@ -234,7 +220,7 @@ const BillableServices = () => {
               page={currentPage}
               pageSize={pageSize}
               pageSizes={pageSizes}
-              totalItems={searchResults?.length}
+              totalItems={billableServicesAndItems?.length}
               className={styles.pagination}
               size={responsiveSize}
               onChange={({ pageSize: newPageSize, page: newPage }) => {
@@ -281,7 +267,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
             [styles.tabletHeading]: !isDesktop(layout),
             [styles.desktopHeading]: isDesktop(layout),
           })}>
-          <h4>{t('chargeAndservicesList', 'Charge Items and Services list')}</h4>
+          <h4>{t('chargeAndservicesList', 'Stock Items and Services list')}</h4>
         </div>
         <div className={styles.backgroundDataFetchingIndicator}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
@@ -301,7 +287,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
               <OverflowMenuVertical size={16} />
             </>
           )}
-          menuOffset={{ right: '-100px' }}
+          menuOffset={() => ({ top: 0, left: -100 })}
           className={styles.newOverflowMenu}>
           <OverflowMenuItem
             itemText={t('addNewService', 'Add charge service')}
