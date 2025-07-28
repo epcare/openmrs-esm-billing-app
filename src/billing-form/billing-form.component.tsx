@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import isEmpty from 'lodash-es/isEmpty';
 import {
   Button,
   ButtonSet,
   Form,
   InlineLoading,
-  RadioButton,
-  RadioButtonGroup,
   Search,
   Stack,
   Table,
@@ -21,10 +18,9 @@ import { TrashCan } from '@carbon/react/icons';
 import { mutate } from 'swr';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
-import { showSnackbar, showToast, useConfig, useDebounce, useLayoutType } from '@openmrs/esm-framework';
+import { showSnackbar, useConfig, useDebounce, useLayoutType } from '@openmrs/esm-framework';
 import { apiBasePath } from '../constants';
 import { convertToCurrency } from '../helpers';
-import { type BillabeItem } from '../types';
 import { useFetchSearchResults, processBillItems } from '../billing.resource';
 import styles from './billing-form.scss';
 
@@ -47,15 +43,7 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
   const [addedItems, setAddedItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm);
-  const [disableSearch, setDisableSearch] = useState<boolean>(true);
   const searchOptionsRef = useRef(null);
-
-  const toggleSearch = (choiceSelected) => {
-    if (!isEmpty(choiceSelected)) {
-      setDisableSearch(false);
-    }
-    setCategory(choiceSelected === 'Stock Item' ? 'Stock Item' : 'Service');
-  };
 
   const billItemSchema = z.object({
     Qnty: z.number().min(1, t('quantityGreaterThanZero', 'Quantity must be at least one for all items.')), // zod logic
@@ -122,32 +110,25 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
     setGrandTotal(updatedGrandTotal);
   };
 
-  const { data, error, isLoading, isValidating } = useFetchSearchResults(debouncedSearchTerm, category);
+  const { searchResults, error, isLoading, isValidating } = useFetchSearchResults(debouncedSearchTerm, category);
 
   useEffect(() => {
-    const res = data as { results: BillabeItem[] };
+    if (!debouncedSearchTerm) {
+      setSearchOptions([]);
+      return;
+    }
+
+    const res = searchResults;
     setSearchOptions(
-      res?.results?.map((item) =>
-        category === 'Stock Item'
-          ? {
-              uuid: item?.uuid || '',
-              Item: item?.drugName ? item?.drugName : item?.commonName,
-              Qnty: 1,
-              Price: item?.drugName ? item?.purchasePrice : 0,
-              Total: item?.drugName ? item?.purchasePrice : 0,
-              category: 'StockItem',
-            }
-          : {
-              uuid: item?.uuid || '',
-              Item: item?.name ? item?.name : '',
-              Qnty: 1,
-              Price: item?.servicePrices.length > 0 ? item?.servicePrices[0]?.price : 0,
-              Total: item?.servicePrices.length > 0 ? item?.servicePrices[0]?.price : 0,
-              category: 'Service',
-            },
-      ) || [],
+      res?.map((item) => ({
+        uuid: item?.uuid || '',
+        Item: item?.name ? item?.name : '',
+        Qnty: 1,
+        Price: item?.servicePrices.length > 0 ? item?.servicePrices[0]?.price : 0,
+        Total: item?.servicePrices.length > 0 ? item?.servicePrices[0]?.price : 0,
+      })) || [],
     );
-  }, [data, category]);
+  }, [searchResults, category, debouncedSearchTerm]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -217,22 +198,10 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
     <Form className={styles.form}>
       <div className={styles.grid}>
         <Stack>
-          <RadioButtonGroup
-            legendText={t('selectCategory', 'Select category')}
-            name="radio-button-group"
-            defaultSelected="radio-1"
-            className={styles.mt2}
-            onChange={toggleSearch}>
-            <RadioButton labelText={t('stockItem', 'Stock Item')} value="Stock Item" id="stockItem" />
-            <RadioButton labelText={t('service', 'Service')} value="Service" id="service" />
-          </RadioButtonGroup>
-        </Stack>
-        <Stack>
           <Search
             id="searchField"
             size="lg"
             className={styles.mt2}
-            disabled={disableSearch}
             onKeyUp={(e) => setSearchTerm(e.target.value)}
             placeholder={t('searchItems', 'Search items and services')}
             labelText={t('searchItems', 'Search items and services')}

@@ -13,7 +13,7 @@ import {
   useOpenmrsFetchAll,
 } from '@openmrs/esm-framework';
 import { apiBasePath, omrsDateFormat } from './constants';
-import type { FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
+import type { BillableService, FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
 import SelectedDateContext from './hooks/selectedDateContext';
 
 export const useBills = (patientUuid: string = '', billStatus: string = '') => {
@@ -139,15 +139,34 @@ export const usePatientPaymentInfo = (patientUuid: string) => {
 };
 
 export function useFetchSearchResults(searchVal, category) {
-  let url = ``;
-  if (category == 'Stock Item') {
-    url = `${restBaseUrl}/stockmanagement/stockitem?v=default&limit=10&q=${searchVal}`;
-  } else {
-    url = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(display),servicePrices:(uuid,name,price,paymentMode))&limit=10&serviceName=${searchVal}`;
-  }
-  const { data, error, isLoading, isValidating } = useSWR(searchVal ? url : null, openmrsFetch, {});
+  const url = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(display),servicePrices:(uuid,name,price,paymentMode))&limit=10&serviceName=${searchVal}`;
+  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<BillableService> } }, Error>(
+    url,
+    openmrsFetch,
+  );
 
-  return { data: data?.data, error, isLoading: isLoading, isValidating };
+  return {
+    searchResults: data?.data?.results ?? [],
+    error,
+    isLoading,
+    isValidating,
+  };
+}
+
+export function useBillableServicesAndItems() {
+  const apiURL = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,concept:(uuid,display,name:(name)),serviceType:(display),servicePrices:(uuid,name,price,paymentMode:(uuid,name)))`;
+
+  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<BillableService> } }, Error>(
+    apiURL,
+    openmrsFetch,
+  );
+
+  return {
+    billableServicesAndItems: data?.data?.results ?? [],
+    error,
+    isLoading,
+    isValidating,
+  };
 }
 
 export const processBillItems = (payload) => {
