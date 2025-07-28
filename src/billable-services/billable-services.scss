@@ -1,3 +1,4 @@
+@use '@carbon/colors';
 @use '@carbon/layout';
 @use '@carbon/type';
 @use '@openmrs/esm-styleguide/src/vars' as *;
@@ -206,19 +207,26 @@
   justify-content: space-between;
   align-items: center;
   background-color: $ui-02;
+
   .newOverflowMenu {
     background-color: #007d79;
     color: #fff;
     height: 3rem;
     padding: 0.95rem !important;
     width: 8rem;
-    margin-right: 0.5rem;
     white-space: nowrap;
         button.cds--overflow-menu:hover {
           background-color: #007d79 !important;
         }
-}
+  }
 
+  :global(.cds--overflow-menu.cds--overflow-menu--open:hover) {
+    background-color: #007d79 !important;
+  }
+
+  svg {
+    fill: colors.$cool-gray-10 !important;
+  }
 }
 .actionBtn {
   display: flex;

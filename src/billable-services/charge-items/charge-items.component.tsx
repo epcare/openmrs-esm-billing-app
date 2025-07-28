@@ -154,7 +154,7 @@ const ChargeItemForm: React.FC<ChargeItemFormProps> = ({ close, editingItem }) =
 
   return (
     <Form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
-      <ModalHeader closeModal={close} title={t('createBillableItem', 'Create Billable Item')} />
+      <ModalHeader closeModal={close} title={t('createBillableCommodity', 'Create Billable Commodity')} />
       <ModalBody hasScrollingContent={true}>
         <Section>
           <FormLabel className={styles.conceptLabel}>Search for commodity</FormLabel>
@@ -167,7 +167,7 @@ const ChargeItemForm: React.FC<ChargeItemFormProps> = ({ close, editingItem }) =
                   ref={searchInputRef}
                   size="md"
                   id="conceptsSearch"
-                  labelText={t('enterItem', 'Billable Item')}
+                  labelText={t('enterItem', 'Billable Commodity')}
                   placeholder={t('searchCommodity', 'Search for commodity')}
                   className={errors?.search && styles.serviceError}
                   onChange={(e) => {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { type ComponentProps, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 import {
@@ -30,6 +30,8 @@ import {
   navigate,
   launchWorkspace,
   showModal,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '@openmrs/esm-framework';
 import { EmptyState } from '@openmrs/esm-patient-common-lib';
 import { type BillableService } from '../types/index';
@@ -237,8 +239,8 @@ const BillableServices = () => {
       ) : (
         <EmptyState
           launchForm={launchBillableServiceForm}
-          displayText={t('noServicesToDisplay', 'There are no services to display')}
-          headerTitle={t('billableService', 'Billable service')}
+          displayText={t('noServicesToDisplay', 'There are no commodities and services to display')}
+          headerTitle={t('billableService', 'Billable commoditiy and service')}
         />
       )}
       {showOverlay && (
@@ -259,6 +261,7 @@ const BillableServices = () => {
 };
 
 function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, handleClick }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   return (
     <>
       <div className={styles.headerContainer}>
@@ -267,7 +270,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
             [styles.tabletHeading]: !isDesktop(layout),
             [styles.desktopHeading]: isDesktop(layout),
           })}>
-          <h4>{t('chargeAndservicesList', 'Stock Items and Services list')}</h4>
+          <h4>{t('commoditiesAndservicesList', 'Commodities and Services list')}</h4>
         </div>
         <div className={styles.backgroundDataFetchingIndicator}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
@@ -281,21 +284,24 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           size={responsiveSize}
         />
         <OverflowMenu
-          renderIcon={() => (
-            <>
-              Actions Menu&nbsp;&nbsp;
-              <OverflowMenuVertical size={16} />
-            </>
+          onOpen={() => setIsExpanded(true)}
+          onClose={() => setIsExpanded(false)}
+          renderIcon={(props: ComponentProps<typeof ChevronUpIcon>) => (
+            <span className={styles.actionsTrigger}>
+              {t('actions', 'Actions')}
+              &nbsp;&nbsp;
+              {isExpanded ? <ChevronUpIcon size={16} {...props} /> : <ChevronDownIcon size={16} />}
+            </span>
           )}
           menuOffset={() => ({ top: 0, left: -100 })}
           className={styles.newOverflowMenu}>
           <OverflowMenuItem
-            itemText={t('addNewService', 'Add charge service')}
+            itemText={t('addService', 'Add service')}
             onClick={() => {
               navigate({ to: window.getOpenmrsSpaBase() + 'billable-services/add-service' });
             }}
           />
-          <OverflowMenuItem itemText={t('addNewChargeItem', 'Add charge item')} onClick={handleClick} />
+          <OverflowMenuItem itemText={t('addCommodity', 'Add commodity')} onClick={handleClick} />
         </OverflowMenu>
       </div>
     </>
