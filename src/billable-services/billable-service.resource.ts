@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { type OpenmrsResource, openmrsFetch, restBaseUrl, useOpenmrsFetchAll, useConfig } from '@openmrs/esm-framework';
-import { type ServiceConcept } from '../types';
+import { type CashierItem, type ServiceConcept } from '../types';
 import { apiBasePath, serviceConceptUuid } from '../constants';
 import { type BillableService } from '../types/index';
 
@@ -56,6 +56,17 @@ export const createBillableSerice = (payload: any) => {
   });
 };
 
+export const createBillableCommodity = (payload: any) => {
+  const url = `${apiBasePath}cashierItemPrice`;
+  return openmrsFetch(url, {
+    method: 'POST',
+    body: payload,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+};
+
 export function useConceptsSearch(conceptToLookup: string) {
   const conditionsSearchUrl = `${restBaseUrl}/conceptsearch?q=${conceptToLookup}`;
 
@@ -71,16 +82,20 @@ export function useConceptsSearch(conceptToLookup: string) {
   };
 }
 
-export function useBillableServicesAndItems() {
-  const apiURL = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,concept:(uuid,display,name:(name)),serviceType:(display),servicePrices:(uuid,name,price,paymentMode:(uuid,name)))`;
+export function useBillableCommodities() {
+  const apiURL = `${apiBasePath}cashierItemPrice?v=default`;
 
-  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<BillableService> } }, Error>(
+  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<CashierItem> } }, Error>(
     apiURL,
     openmrsFetch,
   );
 
+  const filteredCommodities = (data?.data?.results ?? []).filter(
+    (commodity) => commodity.item && commodity.item.trim() !== '',
+  );
+
   return {
-    billableServicesAndItems: data?.data?.results ?? [],
+    billableCommodities: filteredCommodities,
     error,
     isLoading,
     isValidating,
@@ -89,6 +104,17 @@ export function useBillableServicesAndItems() {
 
 export const updateBillableService = (uuid: string, payload: any) => {
   const url = `${apiBasePath}/billableService/${uuid}`;
+  return openmrsFetch(url, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+};
+
+export const updateBillableCommodity = (uuid: string, payload: any) => {
+  const url = `${apiBasePath}/cashierItemPrice/${uuid}`;
   return openmrsFetch(url, {
     method: 'POST',
     body: JSON.stringify(payload),

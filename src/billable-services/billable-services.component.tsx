@@ -1,4 +1,4 @@
-import React, { type ComponentProps, useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 import {
@@ -20,34 +20,23 @@ import {
   TableRow,
   Tile,
 } from '@carbon/react';
-import { ArrowRight, OverflowMenuVertical } from '@carbon/react/icons';
-import {
-  useLayoutType,
-  isDesktop,
-  useConfig,
-  usePagination,
-  ErrorState,
-  navigate,
-  launchWorkspace,
-  showModal,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from '@openmrs/esm-framework';
+import { ArrowRight } from '@carbon/react/icons';
+import { useLayoutType, isDesktop, useConfig, usePagination, ErrorState, navigate } from '@openmrs/esm-framework';
 import { EmptyState } from '@openmrs/esm-patient-common-lib';
 import { type BillableService } from '../types/index';
-import { useBillableServices, useBillableServicesAndItems } from './billable-service.resource';
+import { useBillableServices } from './billable-service.resource';
 import AddBillableService from './create-edit/add-billable-service.component';
 import styles from './billable-services.scss';
 
 const BillableServices = () => {
   const { t } = useTranslation();
-  const { billableServicesAndItems, error, isLoading, isValidating } = useBillableServicesAndItems();
+  const { billableServices, isLoading, isValidating, error, mutate } = useBillableServices();
   const layout = useLayoutType();
   const config = useConfig();
   const [searchString, setSearchString] = useState('');
   const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
-  const pageSizes = config?.billableServicesAndItems?.pageSizes ?? [10, 20, 30, 40, 50];
-  const [pageSize, setPageSize] = useState(config?.billableServicesAndItems?.pageSize ?? 10);
+  const pageSizes = config?.billableServices?.pageSizes ?? [10, 20, 30, 40, 50];
+  const [pageSize, setPageSize] = useState(config?.billableServices?.pageSize ?? 10);
 
   const [showOverlay, setShowOverlay] = useState(false);
   const [editingService, setEditingService] = useState(null);
@@ -85,7 +74,23 @@ const BillableServices = () => {
     setShowOverlay(true);
   }, []);
 
-  const { paginated, goTo, results, currentPage } = usePagination<BillableService>(billableServicesAndItems, pageSize);
+  const searchResults: BillableService[] = useMemo(() => {
+    const flatBillableServices = Array.isArray(billableServices) ? billableServices.flat() : billableServices;
+
+    if (flatBillableServices !== undefined && flatBillableServices.length > 0) {
+      if (searchString && searchString.trim() !== '') {
+        const search = searchString.toLowerCase();
+        return flatBillableServices.filter((service: BillableService) =>
+          Object.entries(service).some(([header, value]) => {
+            return header === 'uuid' ? false : `${value}`.toLowerCase().includes(search);
+          }),
+        );
+      }
+    }
+    return flatBillableServices;
+  }, [searchString, billableServices]);
+
+  const { paginated, goTo, results, currentPage } = usePagination<BillableService>(searchResults, pageSize);
   const rowData = [];
 
   if (results) {
@@ -93,18 +98,20 @@ const BillableServices = () => {
       const s = {
         id: `${index}`,
         uuid: service.uuid,
-        serviceName: service?.name,
-        shortName: service?.shortName,
+        serviceName: service.name,
+        shortName: service.shortName,
         serviceType: service?.serviceType?.display,
         status: service.serviceStatus,
         prices: '--',
         actions: (
-          <OverflowMenu size="sm" flipped>
-            <OverflowMenuItem
-              itemText={t('editBillableService', 'Edit Billable Service')}
-              onClick={() => handleEditService(service)}
-            />
-          </OverflowMenu>
+          <TableCell>
+            <OverflowMenu size="sm" flipped>
+              <OverflowMenuItem
+                itemText={t('editBillableService', 'Edit Billable Service')}
+                onClick={() => handleEditService(service)}
+              />
+            </OverflowMenu>
+          </TableCell>
         ),
       };
       let cost = '';
@@ -133,37 +140,25 @@ const BillableServices = () => {
     setEditingService(null);
   }, []);
 
-  const launchChargeItemModal = useCallback(() => {
-    const dispose = showModal('charge-item-modal', {
-      closeModal: () => dispose(),
-      size: 'sm',
-    });
-  }, []);
-
   if (isLoading) {
-    return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
+    <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }
-
   if (error) {
-    return <ErrorState headerTitle={t('billableService', 'Billable Service')} error={error} />;
+    <ErrorState headerTitle={t('billableService', 'Billable Service')} error={error} />;
   }
-
-  if (billableServicesAndItems.length === 0) {
-    return (
-      <EmptyState
-        displayText={t('billableServices', 'Billable Services')}
-        headerTitle={t('billableService', 'Billable Service')}
-        launchForm={launchBillableServiceForm}
-      />
-    );
+  if (billableServices.length === 0) {
+    <EmptyState
+      displayText={t('billableService', 'Billable Service')}
+      headerTitle={t('billableService', 'Billable Service')}
+      launchForm={launchBillableServiceForm}
+    />;
   }
 
   return (
     <>
-      {billableServicesAndItems?.length > 0 ? (
+      {billableServices?.length > 0 ? (
         <div className={styles.serviceContainer}>
           <FilterableTableHeader
-            handleClick={launchChargeItemModal}
             handleSearch={handleSearch}
             isValidating={isValidating}
             layout={layout}
@@ -203,7 +198,7 @@ const BillableServices = () => {
               </TableContainer>
             )}
           </DataTable>
-          {billableServicesAndItems?.length === 0 && (
+          {searchResults?.length === 0 && (
             <div className={styles.filterEmptyState}>
               <Layer level={0}>
                 <Tile className={styles.filterEmptyStateTile}>
@@ -222,7 +217,7 @@ const BillableServices = () => {
               page={currentPage}
               pageSize={pageSize}
               pageSizes={pageSizes}
-              totalItems={billableServicesAndItems?.length}
+              totalItems={searchResults?.length}
               className={styles.pagination}
               size={responsiveSize}
               onChange={({ pageSize: newPageSize, page: newPage }) => {
@@ -239,8 +234,8 @@ const BillableServices = () => {
       ) : (
         <EmptyState
           launchForm={launchBillableServiceForm}
-          displayText={t('noServicesToDisplay', 'There are no commodities and services to display')}
-          headerTitle={t('billableService', 'Billable commoditiy and service')}
+          displayText={t('noServicesToDisplay', 'There are no services to display')}
+          headerTitle={t('billableService', 'Billable service')}
         />
       )}
       {showOverlay && (
@@ -260,8 +255,7 @@ const BillableServices = () => {
   );
 };
 
-function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, handleClick }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t }) {
   return (
     <>
       <div className={styles.headerContainer}>
@@ -270,7 +264,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
             [styles.tabletHeading]: !isDesktop(layout),
             [styles.desktopHeading]: isDesktop(layout),
           })}>
-          <h4>{t('commoditiesAndservicesList', 'Commodities and Services list')}</h4>
+          <h4>{t('servicesList', 'Services list')}</h4>
         </div>
         <div className={styles.backgroundDataFetchingIndicator}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
@@ -283,26 +277,16 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           onChange={handleSearch}
           size={responsiveSize}
         />
-        <OverflowMenu
-          onOpen={() => setIsExpanded(true)}
-          onClose={() => setIsExpanded(false)}
-          renderIcon={(props: ComponentProps<typeof ChevronUpIcon>) => (
-            <span className={styles.actionsTrigger}>
-              {t('actions', 'Actions')}
-              &nbsp;&nbsp;
-              {isExpanded ? <ChevronUpIcon size={16} {...props} /> : <ChevronDownIcon size={16} />}
-            </span>
-          )}
-          menuOffset={() => ({ top: 0, left: -100 })}
-          className={styles.newOverflowMenu}>
-          <OverflowMenuItem
-            itemText={t('addService', 'Add service')}
-            onClick={() => {
-              navigate({ to: window.getOpenmrsSpaBase() + 'billable-services/add-service' });
-            }}
-          />
-          <OverflowMenuItem itemText={t('addCommodity', 'Add commodity')} onClick={handleClick} />
-        </OverflowMenu>
+        <Button
+          size={responsiveSize}
+          kind="primary"
+          renderIcon={(props) => <ArrowRight size={16} {...props} />}
+          onClick={() => {
+            navigate({ to: window.getOpenmrsSpaBase() + 'billable-services/add-service' });
+          }}
+          iconDescription={t('addNewBillableService', 'Add new billable service')}>
+          {t('addNewService', 'Add new service')}
+        </Button>
       </div>
     </>
   );

@@ -205,3 +205,19 @@ export interface StockItem {
   commonName;
   string;
 }
+
+export interface CashierItem {
+  uuid: string;
+  display: string;
+  name: string;
+  price: number;
+  paymentMode: PaymentMode;
+  item: string;
+  billableService: BillableService;
+}
+
+export interface PaymentMode {
+  uuid: string;
+  name: string;
+  description: string;
+}

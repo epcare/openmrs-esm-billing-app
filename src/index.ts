@@ -12,6 +12,9 @@ import RequirePaymentModal from './modal/require-payment-modal.component';
 import RootComponent from './root.component';
 import ServiceMetrics from './billable-services/dashboard/service-metrics.component';
 import VisitAttributeTags from './invoice/payments/visit-tags/visit-attribute.component';
+import BillablesConfigurationTabs from './billable-services/billables-config-tabs/billable-config-tabs.component';
+import BillableStock from './billable-services/charge-items/charge-items.component';
+import AddBillableStock from './billable-services/charge-items/charge-items-modal.component';
 
 const moduleName = '@epcare/esm-billing-app';
 
@@ -45,6 +48,12 @@ export const billableServicesAppMenuItem = getSyncLifecycle(appMenu, options);
 export const billableServicesCardLink = getSyncLifecycle(BillableServicesCardLink, options);
 
 export const billableServicesHome = getSyncLifecycle(BillableServiceHome, options);
+
+export const billablesConfigurationTab = getSyncLifecycle(BillablesConfigurationTabs, options);
+
+export const billableCommodities = getSyncLifecycle(BillableStock, options);
+
+export const billableCommoditiesModal = getSyncLifecycle(AddBillableStock, options);
 
 export const billingCheckInForm = getSyncLifecycle(BillingCheckInForm, options);
 

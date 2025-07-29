@@ -1,298 +1,230 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import {
   Button,
-  Form,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  Search,
-  Layer,
+  DataTable,
   InlineLoading,
+  Layer,
+  Modal,
+  OverflowMenu,
+  OverflowMenuItem,
+  Pagination,
+  Search,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
   Tile,
-  FormLabel,
-  Section,
-  Dropdown,
-  TextInput,
 } from '@carbon/react';
-import { showSnackbar, useDebounce, useLayoutType } from '@openmrs/esm-framework';
-import styles from './charge-items-form.scss';
-import { type StockItem } from '../../types';
-import { useFetchChargeItems } from '../../billing.resource';
-import { Add, TrashCan, WarningFilled } from '@carbon/react/icons';
-import { z } from 'zod';
-import {
-  createBillableSerice,
-  updateBillableService,
-  usePaymentModes,
-  useServiceTypes,
-} from '../billable-service.resource';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { handleMutate, apiBasePath } from '../../constants';
+import { ArrowRight } from '@carbon/react/icons';
+import { useLayoutType, isDesktop, usePagination, ErrorState } from '@openmrs/esm-framework';
+import { EmptyState } from '@openmrs/esm-patient-common-lib';
+import { useBillableCommodities, useBillableServices } from '../billable-service.resource';
+import styles from '../billable-services.scss';
+import AddBillableStock from './charge-items-modal.component';
+import classNames from 'classnames';
 
-interface ChargeItemFormProps {
-  close(): () => void;
-  editingItem: any;
-}
-
-const DEFAULT_PAYMENT_OPTION = { paymentMode: '', price: 0 };
-
-const ChargeItemForm: React.FC<ChargeItemFormProps> = ({ close, editingItem }) => {
+const BillableStock = () => {
   const { t } = useTranslation();
-  const isTablet = useLayoutType() === 'tablet';
+  const layout = useLayoutType();
+  const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
 
-  const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const { serviceTypes, isLoading: isLoadingServicesTypes } = useServiceTypes();
+  const { billableCommodities: chargeItems, isLoading, isValidating, error } = useBillableCommodities();
 
-  const debouncedSearchTerm = useDebounce(searchTerm);
+  const [searchString, setSearchString] = useState('');
+  const [pageSize, setPageSize] = useState(10);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
-  const { searchResults, error, isLoading } = useFetchChargeItems(debouncedSearchTerm);
-  const searchInputRef = useRef(null);
-  const handleSearchTermChange = (event: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value);
-  const { paymentModes, isLoading: isLoadingPaymentModes } = usePaymentModes();
-  const servicePriceSchema = z.object({
-    paymentMode: z.string().refine((value) => !!value, 'Payment method is required'),
-    price: z.union([
-      z.number().refine((value) => !!value, 'Price is required'),
-      z.string().refine((value) => !!value, 'Price is required'),
-    ]),
-  });
-  const paymentFormSchema = z.object({
-    payment: z.array(servicePriceSchema).min(1, 'At least one payment option is required'),
-  });
+  const headerData = [
+    { header: t('itemName', 'Item Name'), key: 'itemName' },
+    { header: t('price', 'Price'), key: 'price' },
+    { header: t('paymentMode', 'Payment Mode'), key: 'paymentMode' },
+    { header: t('actions', 'Actions'), key: 'actions' },
+  ];
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      search: '',
-      payment: editingItem?.servicePrices || DEFAULT_PAYMENT_OPTION,
-      serviceType: editingItem?.serviceType,
+  const searchResults = useMemo(() => {
+    if (!chargeItems) return [];
+    if (searchString.trim() === '') return chargeItems;
+
+    const search = searchString.toLowerCase();
+    return chargeItems.filter((item) => Object.values(item).some((val) => `${val}`.toLowerCase().includes(search)));
+  }, [searchString, chargeItems]);
+
+  const { paginated, goTo, results, currentPage } = usePagination(searchResults, pageSize);
+  const rowData = [];
+
+  if (results) {
+    results.forEach((item, index) => {
+      rowData.push({
+        id: `${index}`,
+        uuid: item.uuid,
+        itemName: item.item || '--',
+        price: item.price ?? '--',
+        paymentMode: item.paymentMode?.name || '--',
+        actions: (
+          <TableCell>
+            <OverflowMenu size="sm" flipped>
+              <OverflowMenuItem
+                itemText={t('editBillableStock', 'Edit billable stock')}
+                onClick={() => handleEditItem(item)}
+              />
+            </OverflowMenu>
+          </TableCell>
+        ),
+      });
+    });
+  }
+
+  const handleSearch = useCallback(
+    (e) => {
+      goTo(1);
+      setSearchString(e.target.value);
     },
-    resolver: zodResolver(paymentFormSchema),
-  });
+    [goTo],
+  );
 
-  const { fields, remove, append } = useFieldArray({ name: 'payment', control: control });
-
-  const handleAppendPaymentMode = useCallback(() => append(DEFAULT_PAYMENT_OPTION), [append]);
-  const handleRemovePaymentMode = useCallback((index) => remove(index), [remove]);
-
-  const handleChargeItemChange = useCallback((selectedItem: any) => {
-    setSelectedItem(selectedItem);
+  const handleEditItem = useCallback((item) => {
+    setEditingItem(item);
+    setShowOverlay(true);
   }, []);
 
-  const getPaymentErrorMessage = () => {
-    const paymentError = errors.payment;
-    if (paymentError && typeof paymentError.message === 'string') {
-      return paymentError.message;
-    }
-    return null;
-  };
+  const closeModal = useCallback(() => {
+    setShowOverlay(false);
+    setEditingItem(null);
+  }, []);
 
-  const onSubmit = (data) => {
-    const dispensingServiceType = serviceTypes?.find((type) => type.display?.toLowerCase() === 'dispensing');
-
-    const commonName = searchResults?.map((name) => name?.commonName);
-
-    if (!selectedItem) {
-      showSnackbar({
-        title: t('missingItem', 'Missing item'),
-        subtitle: t('pleaseSelectAnItem', 'Please select a commodity before submitting'),
-        kind: 'error',
-      });
-      return;
-    }
-
-    if (!dispensingServiceType) {
-      showSnackbar({
-        title: t('error', 'Error'),
-        subtitle: t('serviceTypeNotFound', 'Dispensing service type not found'),
-        kind: 'error',
-      });
-      return;
-    }
-    const payload = {
-      name: selectedItem?.drugName,
-      shortName: selectedItem?.commonName,
-      servicePrices: data.payment.map((payment) => {
-        const mode = paymentModes.find((m) => m.uuid === payment.paymentMode);
-        return {
-          paymentMode: payment.paymentMode,
-          name: mode?.name || 'Unknown',
-          price: parseFloat(payment.price),
-        };
-      }),
-      serviceType: dispensingServiceType.uuid,
-      serviceStatus: 'ENABLED',
-      concept: selectedItem?.uuid,
-    };
-
-    const saveAction = editingItem ? updateBillableService(editingItem.uuid, payload) : createBillableSerice(payload);
-
-    saveAction.then(
-      (resp) => {
-        showSnackbar({
-          title: t('billableService', 'Billable service'),
-          subtitle: editingItem
-            ? t('updatedSuccessfully', 'Billable service updated successfully')
-            : t('createdSuccessfully', 'Billable service created successfully'),
-          kind: 'success',
-          timeoutInMs: 3000,
-        });
-        handleMutate(`${apiBasePath}billableService`);
-        close();
-      },
-      (error) => {
-        showSnackbar({ title: t('billPaymentError', 'Bill payment error'), kind: 'error', subtitle: error?.message });
-      },
+  if (isLoading) {
+    return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
+  }
+  if (error) {
+    return <ErrorState headerTitle={t('billableStock', 'Billable Stock')} error={error} />;
+  }
+  if (!chargeItems || chargeItems.length === 0) {
+    return (
+      <EmptyState
+        displayText={t('billableStock', 'Billable Stock')}
+        headerTitle={t('billableStock', 'Billable Stock')}
+        launchForm={() => setShowOverlay(true)}
+      />
     );
-  };
+  }
 
   return (
-    <Form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
-      <ModalHeader closeModal={close} title={t('createBillableCommodity', 'Create Billable Commodity')} />
-      <ModalBody hasScrollingContent={true}>
-        <Section>
-          <FormLabel className={styles.conceptLabel}>Search for commodity</FormLabel>
-          <Controller
-            name="search"
-            control={control}
-            render={({ field: { onChange, value, onBlur } }) => (
-              <ResponsiveWrapper isTablet={isTablet}>
-                <Search
-                  ref={searchInputRef}
-                  size="md"
-                  id="conceptsSearch"
-                  labelText={t('enterItem', 'Billable Commodity')}
-                  placeholder={t('searchCommodity', 'Search for commodity')}
-                  className={errors?.search && styles.serviceError}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    onChange(e);
-                    handleSearchTermChange(e);
-                  }}
-                  renderIcon={errors?.search && <WarningFilled />}
-                  onBlur={onBlur}
-                  onClear={() => {
-                    setSearchTerm('');
-                    setSelectedItem(null);
-                  }}
-                  value={(() => {
-                    if (selectedItem) {
-                      return selectedItem.drugName;
-                    }
-                    if (debouncedSearchTerm) {
-                      return value;
-                    }
-                  })()}
-                />
-              </ResponsiveWrapper>
-            )}
-          />
-
-          {(() => {
-            if (!debouncedSearchTerm || selectedItem) return null;
-            if (isLoading)
-              return <InlineLoading className={styles.loader} description={t('searching', 'Searching') + '...'} />;
-            if (searchResults && searchResults.length) {
-              return (
-                <ul className={styles.conceptsList}>
-                  {/*TODO: use uuid instead of index as the key*/}
-                  {searchResults?.map((searchResult, index) => (
-                    <li
-                      role="menuitem"
-                      className={styles.service}
-                      key={index}
-                      onClick={() => handleChargeItemChange(searchResult)}>
-                      {searchResult.drugName}
-                    </li>
+    <>
+      <div className={styles.serviceContainer}>
+        <FilterableTableHeader
+          handleSearch={handleSearch}
+          isValidating={isValidating}
+          layout={layout}
+          responsiveSize={responsiveSize}
+          t={t}
+          onAddNew={() => setShowOverlay(true)}
+        />
+        <DataTable
+          isSortable
+          rows={rowData}
+          headers={headerData}
+          size={responsiveSize}
+          useZebraStyles={rowData?.length > 1}>
+          {({ rows, headers, getRowProps, getTableProps }) => (
+            <TableContainer>
+              <Table {...getTableProps()} aria-label="charge item list">
+                <TableHead>
+                  <TableRow>
+                    {headers.map((header) => (
+                      <TableHeader key={header.key}>{header.header}</TableHeader>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={row.id} {...getRowProps({ row })}>
+                      {row.cells.map((cell) => (
+                        <TableCell key={cell.id}>{cell.value}</TableCell>
+                      ))}
+                    </TableRow>
                   ))}
-                </ul>
-              );
-            }
-            return (
-              <Layer>
-                <Tile className={styles.emptyResults}>
-                  <span>
-                    {t('noResultsFor', 'No results for')} <strong>"{debouncedSearchTerm}"</strong>
-                  </span>
-                </Tile>
-              </Layer>
-            );
-          })()}
-        </Section>
-        <section>
-          <div className={styles.container}>
-            {fields.map((field, index) => (
-              <div key={field.id} className={styles.paymentMethodContainer}>
-                <Controller
-                  control={control}
-                  name={`payment.${index}.paymentMode`}
-                  render={({ field }) => (
-                    <Layer>
-                      <Dropdown
-                        onChange={({ selectedItem }) => field.onChange(selectedItem.uuid)}
-                        titleText={t('paymentMode', 'Payment Mode')}
-                        label={t('selectPaymentMethod', 'Select payment method')}
-                        items={paymentModes ?? []}
-                        itemToString={(item) => (item ? item.name : '')}
-                        selectedItem={paymentModes.find((mode) => mode.uuid === field.value)}
-                        invalid={!!errors?.payment?.[index]?.paymentMode}
-                        invalidText={errors?.payment?.[index]?.paymentMode?.message}
-                      />
-                    </Layer>
-                  )}
-                />
-                <Controller
-                  control={control}
-                  name={`payment.${index}.price`}
-                  render={({ field }) => (
-                    <Layer>
-                      <TextInput
-                        {...field}
-                        invalid={!!errors?.payment?.[index]?.price}
-                        invalidText={errors?.payment?.[index]?.price?.message}
-                        labelText={t('sellingPrice', 'Selling Price')}
-                        placeholder={t('sellingAmount', 'Enter selling price')}
-                      />
-                    </Layer>
-                  )}
-                />
-                <div className={styles.removeButtonContainer}>
-                  <TrashCan onClick={() => handleRemovePaymentMode(index)} className={styles.removeButton} size={20} />
-                </div>
-              </div>
-            ))}
-            <Button
-              size="md"
-              onClick={handleAppendPaymentMode}
-              className={styles.paymentButtons}
-              renderIcon={(props) => <Add size={24} {...props} />}
-              iconDescription="Add">
-              {t('addPaymentOptions', 'Add payment option')}
-            </Button>
-            {getPaymentErrorMessage() && <div className={styles.errorMessage}>{getPaymentErrorMessage()}</div>}
-          </div>
-        </section>
-      </ModalBody>
-      <ModalFooter>
-        <Button kind="secondary" onClick={close}>
-          {t('cancel', 'Cancel')}
-        </Button>
-        <Button className={styles.submitButton} type="submit">
-          <span>{t('submit', 'Submit')}</span>
-        </Button>
-      </ModalFooter>
-    </Form>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DataTable>
+        {paginated && (
+          <Pagination
+            forwardText="Next page"
+            backwardText="Previous page"
+            page={currentPage}
+            pageSize={pageSize}
+            pageSizes={[10, 20, 30, 40, 50]}
+            totalItems={searchResults.length}
+            className={styles.pagination}
+            size={responsiveSize}
+            onChange={({ pageSize: newPageSize, page: newPage }) => {
+              if (newPageSize !== pageSize) {
+                setPageSize(newPageSize);
+              }
+              if (newPage !== currentPage) {
+                goTo(newPage);
+              }
+            }}
+          />
+        )}
+      </div>
+
+      {showOverlay && (
+        <Modal
+          open={showOverlay}
+          modalHeading={t('billableStock', 'Billable Stock')}
+          primaryButtonText={null}
+          secondaryButtonText={t('cancel', 'Cancel')}
+          onRequestClose={closeModal}
+          onSecondarySubmit={closeModal}
+          size="lg"
+          passiveModal={true}>
+          <AddBillableStock editingItem={editingItem} onClose={closeModal} />
+        </Modal>
+      )}
+    </>
   );
 };
 
-function ResponsiveWrapper({ children, isTablet }: { children: React.ReactNode; isTablet: boolean }) {
-  return isTablet ? <Layer>{children}</Layer> : <>{children}</>;
+function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, onAddNew }) {
+  return (
+    <>
+      <div className={styles.headerContainer}>
+        <div
+          className={classNames({
+            [styles.tabletHeading]: !isDesktop(layout),
+            [styles.desktopHeading]: isDesktop(layout),
+          })}>
+          <h4>{t('stockList', 'Stock list')}</h4>
+        </div>
+        <div className={styles.backgroundDataFetchingIndicator}>
+          <span>{isValidating ? <InlineLoading /> : null}</span>
+        </div>
+      </div>
+      <div className={styles.actionsContainer}>
+        <Search
+          labelText=""
+          placeholder={t('filterTable', 'Filter table')}
+          onChange={handleSearch}
+          size={responsiveSize}
+        />
+        <Button
+          size={responsiveSize}
+          kind="primary"
+          renderIcon={(props) => <ArrowRight size={16} {...props} />}
+          onClick={onAddNew}
+          iconDescription={t('addNewStock', 'Add new stock')}>
+          {t('addNewStock', 'Add new stock')}
+        </Button>
+      </div>
+    </>
+  );
 }
 
-export default ChargeItemForm;
+export default BillableStock;
