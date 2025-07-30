@@ -6,7 +6,6 @@ import {
   Form,
   ModalBody,
   ModalFooter,
-  ModalHeader,
   Search,
   Layer,
   InlineLoading,
@@ -18,15 +17,13 @@ import {
 } from '@carbon/react';
 import { showSnackbar, useDebounce, useLayoutType } from '@openmrs/esm-framework';
 import styles from './charge-items-form.scss';
-import { type StockItem } from '../../types';
+import { CashierItem, type StockItem } from '../../types';
 import { useFetchChargeItems } from '../../billing.resource';
 import { Add, TrashCan, WarningFilled } from '@carbon/react/icons';
 import { z } from 'zod';
 import {
   createBillableCommodity,
-  createBillableSerice,
   updateBillableCommodity,
-  updateBillableService,
   usePaymentModes,
   useServiceTypes,
 } from '../billable-service.resource';
@@ -41,7 +38,6 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
 
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { serviceTypes, isLoading: isLoadingServicesTypes } = useServiceTypes();
 
   const debouncedSearchTerm = useDebounce(searchTerm);
 
@@ -67,7 +63,7 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
   } = useForm({
     defaultValues: {
       search: '',
-      payment: editingItem?.servicePrices || DEFAULT_PAYMENT_OPTION,
+      payment: editingItem?.servicePrices || [DEFAULT_PAYMENT_OPTION],
       serviceType: editingItem?.serviceType,
     },
     resolver: zodResolver(paymentFormSchema),
@@ -100,7 +96,6 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
       return;
     }
 
-    // find selected paymentMode details
     const servicePrices = data.payment.map((payment) => {
       const mode = paymentModes.find((m) => m.uuid === payment.paymentMode);
       return {
@@ -114,11 +109,10 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
     });
 
     const payload = {
-      name: selectedItem?.drugName,
+      name: servicePrices[0]?.name,
       price: servicePrices[0]?.price ?? 0,
       paymentMode: servicePrices[0]?.paymentMode,
       item: selectedItem?.uuid,
-      // billableService: null,
     };
 
     const saveAction = editingItem
@@ -219,7 +213,7 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
             );
           })()}
         </Section>
-        <section>
+        <Section>
           <div className={styles.container}>
             {fields.map((field, index) => (
               <div key={field.id} className={styles.paymentMethodContainer}>
@@ -271,10 +265,10 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
             </Button>
             {getPaymentErrorMessage() && <div className={styles.errorMessage}>{getPaymentErrorMessage()}</div>}
           </div>
-        </section>
+        </Section>
       </ModalBody>
       <ModalFooter>
-        <Button kind="secondary" onClick={close}>
+        <Button kind="secondary" onClick={onClose}>
           {t('cancel', 'Cancel')}
         </Button>
         <Button className={styles.submitButton} type="submit">
