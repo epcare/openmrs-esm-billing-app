@@ -69,7 +69,7 @@ const BillableStock = () => {
           <TableCell>
             <OverflowMenu size="sm" flipped>
               <OverflowMenuItem
-                itemText={t('editBillableStock', 'Edit billable stock')}
+                itemText={t('editBillableCommodity', 'Edit billable commodity')}
                 onClick={() => handleEditItem(item)}
               />
             </OverflowMenu>
@@ -101,13 +101,13 @@ const BillableStock = () => {
     return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }
   if (error) {
-    return <ErrorState headerTitle={t('billableStock', 'Billable Stock')} error={error} />;
+    return <ErrorState headerTitle={t('billableCommodity', 'Billable commodity')} error={error} />;
   }
   if (!chargeItems || chargeItems.length === 0) {
     return (
       <EmptyState
-        displayText={t('billableStock', 'Billable Stock')}
-        headerTitle={t('billableStock', 'Billable Stock')}
+        displayText={t('billableCommodity', 'Billable commodity')}
+        headerTitle={t('billableCommodity', 'Billable commodity')}
         launchForm={() => setShowOverlay(true)}
       />
     );
@@ -178,7 +178,7 @@ const BillableStock = () => {
       {showOverlay && (
         <Modal
           open={showOverlay}
-          modalHeading={t('billableStock', 'Billable Stock')}
+          modalHeading={t('billableCommodity', 'Billable commodity')}
           primaryButtonText={null}
           secondaryButtonText={t('cancel', 'Cancel')}
           onRequestClose={closeModal}
@@ -201,7 +201,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
             [styles.tabletHeading]: !isDesktop(layout),
             [styles.desktopHeading]: isDesktop(layout),
           })}>
-          <h4>{t('stockList', 'Stock list')}</h4>
+          <h4>{t('commodityList', 'Commodity list')}</h4>
         </div>
         <div className={styles.backgroundDataFetchingIndicator}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
@@ -219,8 +219,8 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           kind="primary"
           renderIcon={(props) => <ArrowRight size={16} {...props} />}
           onClick={onAddNew}
-          iconDescription={t('addNewStock', 'Add new stock')}>
-          {t('addNewStock', 'Add new stock')}
+          iconDescription={t('addNewCommodity', 'Add new commodity')}>
+          {t('addNewCommodity', 'Add new commodity')}
         </Button>
       </div>
     </>

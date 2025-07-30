@@ -13,7 +13,7 @@ const BillablesConfigurationTabs = () => {
       <Tabs selectedIndex={selectedIndex} onChange={({ selectedIndex }) => setSelectedIndex(selectedIndex)}>
         <TabList contained>
           <Tab>{t('billableServices', 'Billable Services')}</Tab>
-          <Tab>{t('billableStock', 'Billable Stock')}</Tab>
+          <Tab>{t('billableCommodities', 'Billable Commodities')}</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
