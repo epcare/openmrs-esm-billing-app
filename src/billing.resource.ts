@@ -13,7 +13,7 @@ import {
   useOpenmrsFetchAll,
 } from '@openmrs/esm-framework';
 import { apiBasePath, omrsDateFormat } from './constants';
-import type { FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
+import type { BillabeItem, FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
 import SelectedDateContext from './hooks/selectedDateContext';
 
 export const useBills = (patientUuid: string = '', billStatus: string = '') => {
@@ -148,6 +148,21 @@ export function useFetchSearchResults(searchVal, category) {
   const { data, error, isLoading, isValidating } = useSWR(searchVal ? url : null, openmrsFetch, {});
 
   return { data: data?.data, error, isLoading: isLoading, isValidating };
+}
+
+export function useFetchChargeItems(searchValue: string) {
+  const apiUrl = `${restBaseUrl}/stockmanagement/stockitem?v=default&limit=10&q=${searchValue}`;
+
+  const { data, isLoading, error } = useSWR<{ data: { results: Array<StockItem> } }, Error>(
+    searchValue ? apiUrl : null,
+    openmrsFetch,
+  );
+
+  return {
+    searchResults: data?.data?.results ?? [],
+    error,
+    isLoading,
+  };
 }
 
 export const processBillItems = (payload) => {
