@@ -17,8 +17,8 @@ import {
 } from '@carbon/react';
 import { showSnackbar, useDebounce, useLayoutType } from '@openmrs/esm-framework';
 import styles from './charge-items-form.scss';
-import { CashierItem, type StockItem } from '../../types';
-import { useFetchChargeItems } from '../../billing.resource';
+import { CashierItem, type StockItem } from '../types';
+import { useFetchChargeItems } from '../billing.resource';
 import { Add, TrashCan, WarningFilled } from '@carbon/react/icons';
 import { z } from 'zod';
 import {
@@ -26,9 +26,9 @@ import {
   updateBillableCommodity,
   usePaymentModes,
   useServiceTypes,
-} from '../billable-service.resource';
+} from '../billable-services/billable-service.resource';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { handleMutate, apiBasePath } from '../../constants';
+import { handleMutate, apiBasePath } from '../constants';
 
 const DEFAULT_PAYMENT_OPTION = { paymentMode: '', price: 0 };
 
