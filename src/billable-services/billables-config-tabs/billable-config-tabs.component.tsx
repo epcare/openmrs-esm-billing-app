@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tab, TabPanel, TabPanels, TabList, Tabs } from '@carbon/react';
 import BillableServices from '../billable-services.component';
 import { useTranslation } from 'react-i18next';
-import BillableStock from '../charge-items/charge-items.component';
+import BillableStock from '../../billable-commodities/billable-commodities.component';
 
 const BillablesConfigurationTabs = () => {
   const { t } = useTranslation();

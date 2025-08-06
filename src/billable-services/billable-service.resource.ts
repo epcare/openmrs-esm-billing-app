@@ -123,3 +123,14 @@ export const updateBillableCommodity = (uuid: string, payload: any) => {
     },
   });
 };
+
+export const deleteBillableCommodity = (uuid: string) => {
+  const url = `${apiBasePath}cashierItemPrice/${uuid}`;
+
+  return openmrsFetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+};

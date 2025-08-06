@@ -13,8 +13,9 @@ import RootComponent from './root.component';
 import ServiceMetrics from './billable-services/dashboard/service-metrics.component';
 import VisitAttributeTags from './invoice/payments/visit-tags/visit-attribute.component';
 import BillablesConfigurationTabs from './billable-services/billables-config-tabs/billable-config-tabs.component';
-import BillableStock from './billable-services/charge-items/charge-items.component';
-import AddBillableStock from './billable-services/charge-items/charge-items-modal.component';
+import BillableStock from './billable-commodities/billable-commodities.component';
+import AddBillableStock from './billable-commodities/add-billable-commodity.component';
+import DeleteBillableCommodity from './billable-commodities/delete-billable-commodity.component';
 
 const moduleName = '@epcare/esm-billing-app';
 
@@ -55,6 +56,8 @@ export const billableCommodities = getSyncLifecycle(BillableStock, options);
 
 export const billableCommoditiesModal = getSyncLifecycle(AddBillableStock, options);
 
+export const deleteBillableCommoditiesModal = getSyncLifecycle(DeleteBillableCommodity, options);
+
 export const billingCheckInForm = getSyncLifecycle(BillingCheckInForm, options);
 
 export const billingPatientSummary = getSyncLifecycle(BillHistory, options);
@@ -76,6 +79,6 @@ export const editBillLineItemDialog = getAsyncLifecycle(() => import('./bill-ite
 export const billingFormWorkspace = getAsyncLifecycle(() => import('./billing-form/billing-form.component'), options);
 
 export const chargeItemsModal = getAsyncLifecycle(
-  () => import('./billable-services/charge-items/charge-items.component'),
+  () => import('./billable-commodities/billable-commodities.component'),
   options,
 );
