@@ -17,11 +17,15 @@ import {
 } from '@carbon/react';
 import { showSnackbar, useDebounce, useLayoutType } from '@openmrs/esm-framework';
 import styles from './charge-items-form.scss';
-import { type StockItem } from '../../types';
-import { useFetchChargeItems } from '../../billing.resource';
+import { type StockItem } from '../types/index';
+import { useFetchChargeItems } from '../billing.resource';
 import { Add, TrashCan, WarningFilled } from '@carbon/react/icons';
 import { z } from 'zod';
-import { createBillableCommodity, updateBillableCommodity, usePaymentModes } from '../billable-service.resource';
+import {
+  createBillableCommodity,
+  updateBillableCommodity,
+  usePaymentModes,
+} from '../billable-services/billable-service.resource';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { handleMutate, apiBasePath } from '../constants';
 
