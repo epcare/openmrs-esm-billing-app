@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import {
@@ -17,16 +17,11 @@ import {
 } from '@carbon/react';
 import { showSnackbar, useDebounce, useLayoutType } from '@openmrs/esm-framework';
 import styles from './charge-items-form.scss';
-import { CashierItem, type StockItem } from '../../types';
+import { type StockItem } from '../../types';
 import { useFetchChargeItems } from '../../billing.resource';
 import { Add, TrashCan, WarningFilled } from '@carbon/react/icons';
 import { z } from 'zod';
-import {
-  createBillableCommodity,
-  updateBillableCommodity,
-  usePaymentModes,
-  useServiceTypes,
-} from '../billable-service.resource';
+import { createBillableCommodity, updateBillableCommodity, usePaymentModes } from '../billable-service.resource';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { handleMutate, apiBasePath } from '../../constants';
 
@@ -60,9 +55,10 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
     control,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm({
     defaultValues: {
-      search: '',
+      search: editingItem?.item,
       payment: editingItem?.servicePrices || [DEFAULT_PAYMENT_OPTION],
       serviceType: editingItem?.serviceType,
     },
@@ -86,12 +82,32 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
     return null;
   };
 
+  useEffect(() => {
+    if (editingItem) {
+      reset({
+        search: editingItem.uuid || '',
+        payment: [
+          {
+            paymentMode: editingItem.paymentMode?.uuid || '',
+            price: editingItem.price || 0,
+          },
+        ],
+      });
+    }
+  }, [editingItem, reset]);
+
   const onSubmit = (data) => {
-    if (!selectedItem) {
+    if (!selectedItem && !editingItem?.item) {
       showSnackbar({
         title: t('missingItem', 'Missing item'),
-        subtitle: t('pleaseSelectAnItem', 'Please select a commodity before submitting'),
+        subtitle: t(
+          editingItem ? 'pleaseSelectOrRetainAnItem' : 'pleaseSelectAnItem',
+          editingItem
+            ? 'Please select or retain the existing commodity before submitting'
+            : 'Please select a commodity before submitting',
+        ),
         kind: 'error',
+        timeoutInMs: 3000,
       });
       return;
     }
@@ -137,6 +153,7 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
           title: t('commodityError', 'Commodity error'),
           kind: 'error',
           subtitle: error?.message,
+          timeoutInMs: 3000,
         });
       },
     );
@@ -146,72 +163,91 @@ const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = (
     <Form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
       <ModalBody hasScrollingContent={true}>
         <Section>
-          <FormLabel className={styles.conceptLabel}>Search for commodity</FormLabel>
-          <Controller
-            name="search"
-            control={control}
-            render={({ field: { onChange, value, onBlur } }) => (
-              <ResponsiveWrapper isTablet={isTablet}>
-                <Search
-                  ref={searchInputRef}
-                  size="md"
-                  id="conceptsSearch"
-                  labelText={t('enterItem', 'Billable Commodity')}
-                  placeholder={t('searchCommodity', 'Search for commodity')}
-                  className={errors?.search && styles.serviceError}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    onChange(e);
-                    handleSearchTermChange(e);
-                  }}
-                  renderIcon={errors?.search && <WarningFilled />}
-                  onBlur={onBlur}
-                  onClear={() => {
-                    setSearchTerm('');
-                    setSelectedItem(null);
-                  }}
-                  value={(() => {
-                    if (selectedItem) {
-                      return selectedItem.drugName;
-                    }
-                    if (debouncedSearchTerm) {
-                      return value;
-                    }
-                  })()}
-                />
-              </ResponsiveWrapper>
-            )}
-          />
+          {editingItem && editingItem != null ? (
+            <Layer>
+              <TextInput
+                id="commodityName"
+                type="text"
+                labelText={t('commodity', 'Commodity Name')}
+                size="md"
+                value={editingItem?.item || 'null'}
+                onChange={() => {
+                  if (editingItem) {
+                    setSelectedItem(editingItem.item);
+                  }
+                }}
+              />
+            </Layer>
+          ) : (
+            <div>
+              <FormLabel className={styles.conceptLabel}>Search for commodity</FormLabel>
+              <Controller
+                name="search"
+                control={control}
+                render={({ field: { onChange, value, onBlur } }) => (
+                  <ResponsiveWrapper isTablet={isTablet}>
+                    <Search
+                      ref={searchInputRef}
+                      size="md"
+                      id="search"
+                      labelText={t('enterItem', 'Billable Commodity')}
+                      placeholder={t('searchCommodity', 'Search for commodity')}
+                      className={errors?.search && styles.serviceError}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        onChange(e);
+                        handleSearchTermChange(e);
+                      }}
+                      renderIcon={errors?.search && <WarningFilled />}
+                      onBlur={onBlur}
+                      onClear={() => {
+                        setSearchTerm('');
+                        setSelectedItem(null);
+                      }}
+                      value={(() => {
+                        if (selectedItem) {
+                          return selectedItem.drugName;
+                        }
+                        if (debouncedSearchTerm) {
+                          return value;
+                        }
+                      })()}
+                    />
+                  </ResponsiveWrapper>
+                )}
+              />
 
-          {(() => {
-            if (!debouncedSearchTerm || selectedItem) return null;
-            if (isLoading)
-              return <InlineLoading className={styles.loader} description={t('searching', 'Searching') + '...'} />;
-            if (searchResults && searchResults.length) {
-              return (
-                <ul className={styles.conceptsList}>
-                  {searchResults?.map((searchResult, index) => (
-                    <li
-                      role="menuitem"
-                      className={styles.service}
-                      key={index}
-                      onClick={() => handleChargeItemChange(searchResult)}>
-                      {searchResult.drugName}
-                    </li>
-                  ))}
-                </ul>
-              );
-            }
-            return (
-              <Layer>
-                <Tile className={styles.emptyResults}>
-                  <span>
-                    {t('noResultsFor', 'No results for')} <strong>"{debouncedSearchTerm}"</strong>
-                  </span>
-                </Tile>
-              </Layer>
-            );
-          })()}
+              {(() => {
+                if (!debouncedSearchTerm || selectedItem) return null;
+                if (isLoading)
+                  return <InlineLoading className={styles.loader} description={t('searching', 'Searching') + '...'} />;
+                if (searchResults && searchResults.length) {
+                  return (
+                    <ul className={styles.conceptsList}>
+                      {searchResults?.map((searchResult, index) => (
+                        <li
+                          role="menuitem"
+                          className={styles.service}
+                          key={index}
+                          onClick={() => handleChargeItemChange(searchResult)}>
+                          {searchResult.drugName}
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                }
+                return (
+                  <Layer>
+                    <Tile className={styles.emptyResults}>
+                      <span>
+                        {t('noResultsFor', 'No results for')} <strong>"{debouncedSearchTerm}"</strong>
+                      </span>
+                    </Tile>
+                  </Layer>
+                );
+              })()}
+            </div>
+          )}
         </Section>
         <Section>
           <div className={styles.container}>

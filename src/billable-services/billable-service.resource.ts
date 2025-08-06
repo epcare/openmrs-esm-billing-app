@@ -103,7 +103,7 @@ export function useBillableCommodities() {
 }
 
 export const updateBillableService = (uuid: string, payload: any) => {
-  const url = `${apiBasePath}/billableService/${uuid}`;
+  const url = `${apiBasePath}billableService/${uuid}`;
   return openmrsFetch(url, {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -114,7 +114,7 @@ export const updateBillableService = (uuid: string, payload: any) => {
 };
 
 export const updateBillableCommodity = (uuid: string, payload: any) => {
-  const url = `${apiBasePath}/cashierItemPrice/${uuid}`;
+  const url = `${apiBasePath}cashierItemPrice/${uuid}`;
   return openmrsFetch(url, {
     method: 'POST',
     body: JSON.stringify(payload),
