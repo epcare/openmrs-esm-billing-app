@@ -1,0 +1,72 @@
+@use '@carbon/colors';
+@use '@carbon/layout';
+@use '@carbon/type';
+@use '@openmrs/esm-styleguide/src/vars' as *;
+
+.tablet {
+  padding: layout.$spacing-06 layout.$spacing-05;
+  background-color: $ui-02;
+}
+
+.desktop {
+  padding: 0rem;
+}
+
+:global(.cds--modal-container) {
+  overflow-y: auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.service {
+  padding: layout.$spacing-05 layout.$spacing-04;
+}
+
+.conceptsList {
+  background-color: $ui-02;
+  max-height: 14rem;
+  overflow-y: auto;
+  border: 1px solid $ui-03;
+
+  li:hover {
+    background-color: $ui-03;
+  }
+}
+
+.emptyResults {
+  @include type.type-style('body-compact-01');
+  color: $text-02;
+  min-height: layout.$spacing-05;
+  border: 1px solid $ui-03;
+}
+
+.conceptLabel {
+  @include type.type-style('label-02');
+  margin: layout.$spacing-05;
+}
+
+.container {
+  margin: layout.$spacing-05;
+}
+
+.paymentMethodContainer {
+  display: flex;
+  flex-direction: column;
+  row-gap: 1rem;
+}
+
+.removeButtonContainer {
+  display: flex;
+  align-self: center;
+  cursor: pointer;
+  margin-left: layout.$spacing-07;
+}
+
+.removeButton {
+  color: colors.$red-60;
+}

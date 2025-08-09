@@ -13,7 +13,7 @@ import {
   useOpenmrsFetchAll,
 } from '@openmrs/esm-framework';
 import { apiBasePath, omrsDateFormat } from './constants';
-import type { BillableService, FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
+import type { BillabeItem, FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
 import SelectedDateContext from './hooks/selectedDateContext';
 
 export const useBills = (patientUuid: string = '', billStatus: string = '') => {
@@ -139,9 +139,22 @@ export const usePatientPaymentInfo = (patientUuid: string) => {
 };
 
 export function useFetchSearchResults(searchVal, category) {
-  const url = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(display),servicePrices:(uuid,name,price,paymentMode))&limit=10&serviceName=${searchVal}`;
-  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<BillableService> } }, Error>(
-    url,
+  let url = ``;
+  if (category == 'Commodity') {
+    url = `${restBaseUrl}/stockmanagement/stockitem?v=default&limit=10&q=${searchVal}`;
+  } else {
+    url = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(display),servicePrices:(uuid,name,price,paymentMode))&limit=10&serviceName=${searchVal}`;
+  }
+  const { data, error, isLoading, isValidating } = useSWR(searchVal ? url : null, openmrsFetch, {});
+
+  return { data: data?.data, error, isLoading: isLoading, isValidating };
+}
+
+export function useFetchChargeItems(searchValue: string) {
+  const apiUrl = `${restBaseUrl}/stockmanagement/stockitem?v=default&limit=10&q=${searchValue}`;
+
+  const { data, isLoading, error } = useSWR<{ data: { results: Array<StockItem> } }, Error>(
+    searchValue ? apiUrl : null,
     openmrsFetch,
   );
 
@@ -149,23 +162,6 @@ export function useFetchSearchResults(searchVal, category) {
     searchResults: data?.data?.results ?? [],
     error,
     isLoading,
-    isValidating,
-  };
-}
-
-export function useBillableServicesAndItems() {
-  const apiURL = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,concept:(uuid,display,name:(name)),serviceType:(display),servicePrices:(uuid,name,price,paymentMode:(uuid,name)))`;
-
-  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<BillableService> } }, Error>(
-    apiURL,
-    openmrsFetch,
-  );
-
-  return {
-    billableServicesAndItems: data?.data?.results ?? [],
-    error,
-    isLoading,
-    isValidating,
   };
 }
 
