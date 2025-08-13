@@ -147,7 +147,7 @@ const AddBillableService: React.FC<{ editingService?: any; onClose: () => void }
           kind: 'success',
           timeoutInMs: 3000,
         });
-        handleMutate(`${apiBasePath}billableService`);
+        handleMutate(`${apiBasePath}billableService?v=full`);
         onClose();
       },
       (error) => {

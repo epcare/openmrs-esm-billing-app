@@ -9,7 +9,7 @@ type ResponseObject = {
 };
 
 export const useBillableServices = () => {
-  const url = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,concept:(uuid,display,name:(name)),serviceType:(display),servicePrices:(uuid,name,price,paymentMode:(uuid,name)))`;
+  const url = `${apiBasePath}billableService?v=full`;
   const { data, isLoading, isValidating, error, mutate } = useOpenmrsFetchAll<BillableService[]>(url);
 
   return {
