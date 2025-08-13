@@ -22,10 +22,11 @@ import {
 import { ArrowRight } from '@carbon/react/icons';
 import { useLayoutType, isDesktop, usePagination, ErrorState } from '@openmrs/esm-framework';
 import { EmptyState } from '@openmrs/esm-patient-common-lib';
-import { useBillableCommodities, useBillableServices } from '../billable-service.resource';
-import styles from '../billable-services.scss';
-import AddBillableStock from './charge-items-modal.component';
+import { useBillableCommodities, useBillableServices } from '../billable-services/billable-service.resource';
+import styles from '../billable-services/billable-services.scss';
+import AddBillableStock from './add-billable-commodity.component';
 import classNames from 'classnames';
+import DeleteBillableCommodity from './delete-billable-commodity.component';
 
 const BillableStock = () => {
   const { t } = useTranslation();
@@ -36,8 +37,10 @@ const BillableStock = () => {
 
   const [searchString, setSearchString] = useState('');
   const [pageSize, setPageSize] = useState(10);
-  const [showOverlay, setShowOverlay] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const headerData = [
     { header: t('itemName', 'Item Name'), key: 'itemName' },
@@ -72,6 +75,12 @@ const BillableStock = () => {
                 itemText={t('editBillableCommodity', 'Edit billable commodity')}
                 onClick={() => handleEditItem(item)}
               />
+              <div className={styles.deleteItemContainer}>
+                <OverflowMenuItem
+                  itemText={t('deleteBillableCommodity', 'Delete billable commodity')}
+                  onClick={() => handleDeleteItem(item)}
+                />
+              </div>
             </OverflowMenu>
           </TableCell>
         ),
@@ -89,12 +98,22 @@ const BillableStock = () => {
 
   const handleEditItem = useCallback((item) => {
     setEditingItem(item);
-    setShowOverlay(true);
+    setShowEditModal(true);
+  }, []);
+
+  const handleDeleteItem = useCallback((item) => {
+    setDeletingItem(item);
+    setShowDeleteModal(true);
   }, []);
 
   const closeModal = useCallback(() => {
-    setShowOverlay(false);
+    setShowEditModal(false);
     setEditingItem(null);
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    setShowDeleteModal(false);
+    setDeletingItem(null);
   }, []);
 
   if (isLoading) {
@@ -108,7 +127,7 @@ const BillableStock = () => {
       <EmptyState
         displayText={t('billableCommodity', 'Billable commodity')}
         headerTitle={t('billableCommodity', 'Billable commodity')}
-        launchForm={() => setShowOverlay(true)}
+        launchForm={() => setShowEditModal(true)}
       />
     );
   }
@@ -122,7 +141,7 @@ const BillableStock = () => {
           layout={layout}
           responsiveSize={responsiveSize}
           t={t}
-          onAddNew={() => setShowOverlay(true)}
+          onAddNew={() => setShowEditModal(true)}
         />
         <DataTable
           isSortable
@@ -175,9 +194,9 @@ const BillableStock = () => {
         )}
       </div>
 
-      {showOverlay && (
+      {showEditModal && (
         <Modal
-          open={showOverlay}
+          open={showEditModal}
           modalHeading={t('billableCommodity', 'Billable commodity')}
           primaryButtonText={null}
           secondaryButtonText={t('cancel', 'Cancel')}
@@ -186,6 +205,20 @@ const BillableStock = () => {
           size="lg"
           passiveModal={true}>
           <AddBillableStock editingItem={editingItem} onClose={closeModal} />
+        </Modal>
+      )}
+
+      {showDeleteModal && (
+        <Modal
+          open={showDeleteModal}
+          modalHeading={t('deletebillableCommodity', 'Delete Billable commodity')}
+          primaryButtonText={null}
+          secondaryButtonText={t('cancel', 'Cancel')}
+          onRequestClose={closeDeleteModal}
+          onSecondarySubmit={closeDeleteModal}
+          size="md"
+          passiveModal={true}>
+          <DeleteBillableCommodity deletingItem={deletingItem} onClose={closeDeleteModal} />
         </Modal>
       )}
     </>

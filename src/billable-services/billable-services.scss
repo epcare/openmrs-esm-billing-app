@@ -218,3 +218,10 @@
   grid-template-columns: 16rem 1fr;
 }
 
+.deleteItemContainer {
+  width: 100%;
+  :global(.cds--overflow-menu-options__btn:hover){
+    background-color: colors.$red-60;
+    color: colors.$gray-10;
+  }
+}
