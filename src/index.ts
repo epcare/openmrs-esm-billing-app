@@ -79,6 +79,6 @@ export const editBillLineItemDialog = getAsyncLifecycle(() => import('./bill-ite
 export const billingFormWorkspace = getAsyncLifecycle(() => import('./billing-form/billing-form.component'), options);
 
 export const chargeItemsModal = getAsyncLifecycle(
-  () => import('./billable-commodities/billable-commodities.component'),
-  options,
+  () => import('./billable-commodities/add-billable-commodity.component'),
+  { featureName: 'charge-item-modal', moduleName },
 );
