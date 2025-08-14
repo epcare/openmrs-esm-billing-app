@@ -31,7 +31,12 @@ import { handleMutate, apiBasePath } from '../constants';
 
 const DEFAULT_PAYMENT_OPTION = { paymentMode: '', price: 0 };
 
-const AddBillableStock: React.FC<{ editingItem?: any; onClose: () => void }> = ({ onClose, editingItem }) => {
+interface AddBillableStockProps {
+  editingItem?: any;
+  onClose: () => void;
+}
+
+const AddBillableStock: React.FC<AddBillableStockProps> = ({ onClose, editingItem }) => {
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
 
