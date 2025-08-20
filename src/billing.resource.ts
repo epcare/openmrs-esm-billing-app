@@ -140,7 +140,7 @@ export const usePatientPaymentInfo = (patientUuid: string) => {
 
 export function useFetchSearchResults(searchVal, category) {
   let url = ``;
-  if (category == 'Stock Item') {
+  if (category == 'Commodity') {
     url = `${restBaseUrl}/stockmanagement/stockitem?v=default&limit=10&q=${searchVal}`;
   } else {
     url = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(display),servicePrices:(uuid,name,price,paymentMode))&limit=10&serviceName=${searchVal}`;

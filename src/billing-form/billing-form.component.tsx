@@ -128,14 +128,14 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
     const res = data as { results: BillabeItem[] };
     setSearchOptions(
       res?.results?.map((item) =>
-        category === 'Stock Item'
+        category === 'Commodity'
           ? {
               uuid: item?.uuid || '',
               Item: item?.drugName ? item?.drugName : item?.commonName,
               Qnty: 1,
               Price: item?.drugName ? item?.purchasePrice : 0,
               Total: item?.drugName ? item?.purchasePrice : 0,
-              category: 'StockItem',
+              category: 'Commodity',
             }
           : {
               uuid: item?.uuid || '',
@@ -183,7 +183,7 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
         paymentStatus: 'PENDING',
       };
 
-      if (item.category === 'StockItem') {
+      if (item.category === 'Commodity') {
         lineItem.item = item.uuid;
       } else {
         lineItem.billableService = item.uuid;
@@ -223,7 +223,7 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
             defaultSelected="radio-1"
             className={styles.mt2}
             onChange={toggleSearch}>
-            <RadioButton labelText={t('stockItem', 'Stock Item')} value="Stock Item" id="stockItem" />
+            <RadioButton labelText={t('commodity', 'Commodity')} value="Commodity" id="commodity" />
             <RadioButton labelText={t('service', 'Service')} value="Service" id="service" />
           </RadioButtonGroup>
         </Stack>
