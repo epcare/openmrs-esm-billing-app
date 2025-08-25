@@ -130,7 +130,7 @@ const AddBillableService: React.FC<{ editingService?: any; onClose: () => void }
         };
       }),
       serviceStatus: 'ENABLED',
-      concept: selectedConcept?.uuid,
+      concept: selectedConcept?.concept?.uuid,
     };
 
     const saveAction = editingService
