@@ -194,8 +194,15 @@ export interface BillableService {
   servicePrices: Array<{
     name: string;
     price: number;
+    paymentMode: PaymentMode;
   }>;
 }
+
+export interface PaymentMode {
+  uuid: string;
+  name: string;
+}
+
 export interface StockItem {
   uuid: string;
   drugUuid: string;
@@ -214,10 +221,4 @@ export interface CashierItem {
   paymentMode: PaymentMode;
   item: string;
   billableService: BillableService;
-}
-
-export interface PaymentMode {
-  uuid: string;
-  name: string;
-  description: string;
 }
