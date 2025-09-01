@@ -21,7 +21,7 @@ export const createBillWaiverPayload = (
   const processedLineItems = lineItems.map((lineItem) => ({
     ...lineItem,
     billableService: findBillableServiceUuid(billableLineItems, lineItem),
-    paymentStatus: 'PENDING',
+    paymentStatus: 'PAID',
   }));
 
   const processedPayment = {
