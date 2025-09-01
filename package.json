@@ -51,7 +51,7 @@
     "zod": "^3.22.4"
   },
   "peerDependencies": {
-    "@openmrs/esm-framework": "6.x",
+    "@openmrs/esm-framework": "7.x",
     "@openmrs/esm-patient-common-lib": "10.x",
     "react": "18.x",
     "react-dom": "18.x",
@@ -60,7 +60,7 @@
     "swr": "2.x"
   },
   "devDependencies": {
-    "@openmrs/esm-framework": "^7.0.1-pre.3293",
+    "@openmrs/esm-framework": "next",
     "@openmrs/esm-patient-common-lib": "next",
     "@playwright/test": "^1.49.0",
     "@swc/cli": "^0.3.2",
@@ -97,7 +97,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "lint-staged": "^15.2.10",
     "lodash": "^4.17.21",
-    "openmrs": "^7.0.1-pre.3293",
+    "openmrs": "next",
     "pinst": "^3.0.0",
     "prettier": "^3.2.4",
     "react": "^18.2.0",
