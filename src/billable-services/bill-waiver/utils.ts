@@ -1,22 +1,21 @@
 import { type OpenmrsResource } from '@openmrs/esm-framework';
-import type { LineItem, MappedBill } from '../../types';
-
-const WAIVER_UUID = 'eb6173cb-9678-4614-bbe1-0ccf7ed9d1d4';
+import type { BillableService, LineItem, MappedBill } from '../../types';
 
 export const createBillWaiverPayload = (
   bill: MappedBill,
   amountWaived: number,
   totalAmount: number,
   lineItems: Array<LineItem>,
-  billableLineItems: Array<OpenmrsResource>,
+  billableLineItems: Array<BillableService>,
 ) => {
   const { cashier } = bill;
+  const waiverUuid = findBillableServiceWaiverUuid(billableLineItems);
 
   const billPayment = {
     amount: parseFloat(totalAmount.toFixed(2)),
     amountTendered: parseFloat(Number(amountWaived).toFixed(2)),
     attributes: [],
-    instanceType: WAIVER_UUID,
+    instanceType: waiverUuid,
   };
 
   const processedLineItems = lineItems.map((lineItem) => ({
@@ -38,4 +37,16 @@ export const createBillWaiverPayload = (
 
 const findBillableServiceUuid = (billableService: Array<OpenmrsResource>, lineItems: LineItem) => {
   return billableService.find((service) => service.name === lineItems.billableService)?.uuid ?? null;
+};
+
+export const findBillableServiceWaiverUuid = (billableServices: Array<BillableService>): string | null => {
+  for (const service of billableServices) {
+    if (service.servicePrices?.length) {
+      const firstPrice = service.servicePrices[0];
+      if (firstPrice?.paymentMode?.uuid) {
+        return firstPrice.paymentMode.uuid;
+      }
+    }
+  }
+  return null;
 };
