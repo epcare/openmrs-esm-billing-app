@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import React, { useContext } from 'react';
 import dayjs from 'dayjs';
 import isEmpty from 'lodash-es/isEmpty';
 import sortBy from 'lodash-es/sortBy';
@@ -12,13 +12,12 @@ import {
   restBaseUrl,
   useOpenmrsFetchAll,
 } from '@openmrs/esm-framework';
-import { apiBasePath, omrsDateFormat } from './constants';
-import type { BillabeItem, FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
+import { apiBasePath } from './constants';
+import type { FacilityDetail, MappedBill, PatientInvoice, StockItem } from './types';
 import SelectedDateContext from './hooks/selectedDateContext';
 
 export const useBills = (patientUuid: string = '', billStatus: string = '') => {
   const { selectedDate } = useContext(SelectedDateContext);
-  const endDate = dayjs().endOf('day').format(omrsDateFormat);
   const url = `${apiBasePath}bill?q=&v=full`;
 
   const patientUrl = `${apiBasePath}bill?patientUuid=${patientUuid}&v=full`;
@@ -28,7 +27,7 @@ export const useBills = (patientUuid: string = '', billStatus: string = '') => {
     openmrsFetch,
   );
 
-  const mapBillProperties = (bill: PatientInvoice): MappedBill => ({
+  const mapBillProperties = (bill: PatientInvoice): MappedBill & { dateCreatedRaw?: string | null } => ({
     id: bill?.id,
     uuid: bill?.uuid,
     patientName: bill?.patient?.display.split('-')?.[1],
@@ -40,6 +39,7 @@ export const useBills = (patientUuid: string = '', billStatus: string = '') => {
     cashPointUuid: bill?.cashPoint?.uuid,
     cashPointName: bill?.cashPoint?.name,
     cashPointLocation: bill?.cashPoint?.location?.display,
+    dateCreatedRaw: bill?.dateCreated ?? null,
     dateCreated: bill?.dateCreated ? formatDate(parseDate(bill.dateCreated), { mode: 'wide' }) : '--',
     lineItems: bill?.lineItems,
     billingService: bill?.lineItems.map((bill) => bill?.item || bill?.billableService || '--').join('  '),
@@ -52,8 +52,21 @@ export const useBills = (patientUuid: string = '', billStatus: string = '') => {
   const filteredBills = billStatus === '' ? sortedBills : sortedBills?.filter((bill) => bill?.status === billStatus);
   const mappedResults = filteredBills?.map((bill) => mapBillProperties(bill));
 
+  const dateFilteredBills = React.useMemo(() => {
+    if (!selectedDate) return mappedResults;
+    const start = dayjs(selectedDate).startOf('day');
+    const end = dayjs(selectedDate).endOf('day');
+    return mappedResults.filter((b) => {
+      const raw = b.dateCreatedRaw;
+      if (!raw) return false;
+      const when = dayjs(raw);
+      return (when.isAfter(start) && when.isBefore(end)) || when.isSame(start, 'minute') || when.isSame(end, 'minute');
+    });
+  }, [mappedResults, selectedDate]);
+
   return {
     bills: mappedResults,
+    dateFilteredBills,
     error,
     isLoading,
     isValidating,
