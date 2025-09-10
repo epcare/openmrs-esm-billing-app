@@ -47,15 +47,7 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
   const [addedItems, setAddedItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm);
-  const [disableSearch, setDisableSearch] = useState<boolean>(true);
   const searchOptionsRef = useRef(null);
-
-  const toggleSearch = (choiceSelected) => {
-    if (!isEmpty(choiceSelected)) {
-      setDisableSearch(false);
-    }
-    setCategory(choiceSelected === 'Stock Item' ? 'Stock Item' : 'Service');
-  };
 
   const billItemSchema = z.object({
     Qnty: z.number().min(1, t('quantityGreaterThanZero', 'Quantity must be at least one for all items.')), // zod logic
@@ -217,25 +209,14 @@ const BillingForm: React.FC<BillingFormProps> = ({ patientUuid, closeWorkspace }
     <Form className={styles.form}>
       <div className={styles.grid}>
         <Stack>
-          <RadioButtonGroup
-            legendText={t('selectCategory', 'Select category')}
-            name="radio-button-group"
-            defaultSelected="radio-1"
-            className={styles.mt2}
-            onChange={toggleSearch}>
-            <RadioButton labelText={t('commodity', 'Commodity')} value="Commodity" id="commodity" />
-            <RadioButton labelText={t('service', 'Service')} value="Service" id="service" />
-          </RadioButtonGroup>
-        </Stack>
-        <Stack>
           <Search
             id="searchField"
             size="lg"
             className={styles.mt2}
-            disabled={disableSearch}
-            onKeyUp={(e) => setSearchTerm(e.target.value)}
-            placeholder={t('searchItems', 'Search items and services')}
-            labelText={t('searchItems', 'Search items and services')}
+            // disabled={disableSearch}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t('searchServices', 'Search for billable services')}
+            labelText={t('searchServices', 'Search for billable services')}
           />
         </Stack>
         <Stack>

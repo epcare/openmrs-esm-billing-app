@@ -1,27 +1,31 @@
 import { type OpenmrsResource } from '@openmrs/esm-framework';
-import type { BillableService, LineItem, MappedBill } from '../../types';
+import type { BillableService, LineItem, MappedBill, PaymentMethod } from '../../types';
 
 export const createBillWaiverPayload = (
   bill: MappedBill,
   amountWaived: number,
   totalAmount: number,
   lineItems: Array<LineItem>,
-  billableLineItems: Array<BillableService>,
+  paymentMethod: Array<PaymentMethod>,
+  billableLineItems: Array<OpenmrsResource>,
 ) => {
   const { cashier } = bill;
-  const waiverUuid = findBillableServiceWaiverUuid(billableLineItems);
+  const waiverUuid = findWaiverPaymentMode(paymentMethod);
+  const isExactAmount = totalAmount === amountWaived;
 
   const billPayment = {
     amount: parseFloat(totalAmount.toFixed(2)),
     amountTendered: parseFloat(Number(amountWaived).toFixed(2)),
     attributes: [],
-    instanceType: waiverUuid,
+    instanceType: waiverUuid.uuid,
   };
+
+  const status = isExactAmount ? 'PAID' : 'PENDING';
 
   const processedLineItems = lineItems.map((lineItem) => ({
     ...lineItem,
     billableService: findBillableServiceUuid(billableLineItems, lineItem),
-    paymentStatus: 'PAID',
+    paymentStatus: status,
   }));
 
   const processedPayment = {
@@ -39,14 +43,6 @@ const findBillableServiceUuid = (billableService: Array<OpenmrsResource>, lineIt
   return billableService.find((service) => service.name === lineItems.billableService)?.uuid ?? null;
 };
 
-export const findBillableServiceWaiverUuid = (billableServices: Array<BillableService>): string | null => {
-  for (const service of billableServices) {
-    if (service.servicePrices?.length) {
-      const firstPrice = service.servicePrices[0];
-      if (firstPrice?.paymentMode?.uuid) {
-        return firstPrice.paymentMode.uuid;
-      }
-    }
-  }
-  return null;
+const findWaiverPaymentMode = (paymentMethod: PaymentMethod[]): PaymentMethod | undefined => {
+  return paymentMethod.find((mode) => mode.name.toLowerCase().includes('waiver'));
 };

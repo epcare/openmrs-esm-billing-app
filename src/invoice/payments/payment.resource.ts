@@ -21,8 +21,11 @@ export const usePaymentModes = () => {
     swrOption,
   );
 
+  const paymentModesWithoutWaiver = data?.data?.results.filter((mode) => !mode.name.toLowerCase().includes('waiver'));
+
   return {
     paymentModes: data?.data?.results ?? [],
+    paymentModesWithoutWaiver,
     isLoading,
     mutate,
     error,

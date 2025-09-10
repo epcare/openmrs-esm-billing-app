@@ -28,7 +28,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     control,
     formState: { errors },
   } = useFormContext<PaymentFormValue>();
-  const { paymentModes, isLoading, error } = usePaymentModes();
+  const { paymentModesWithoutWaiver, isLoading, error } = usePaymentModes();
   const { fields, remove, append } = useFieldArray({ name: 'payment', control: control });
   const [isFormVisible, setIsFormVisible] = useState(isSingleLineItem);
 
@@ -73,7 +73,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   onChange={({ selectedItem }) => field.onChange(selectedItem?.uuid)}
                   titleText={t('paymentMethod', 'Payment method')}
                   label={t('selectPaymentMethod', 'Select payment method')}
-                  items={paymentModes}
+                  items={paymentModesWithoutWaiver}
                   itemToString={(item) => (item ? item.name : '')}
                   invalid={!!errors?.payment?.[index]?.method}
                   invalidText={errors?.payment?.[index]?.method?.message}
@@ -119,7 +119,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           </div>
         ))}
       <Button
-        disabled={disablePayment || (!isSingleLineItem && !isSingleLineItemSelected)}
+        disabled={disablePayment || (!isSingleLineItem && !isSingleLineItemSelected) || clientBalance <= 0}
         size="md"
         onClick={handleAppendPaymentMode}
         className={styles.paymentButtons}
