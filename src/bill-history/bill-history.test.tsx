@@ -100,7 +100,14 @@ describe('BillHistory', () => {
   });
 
   test('should render loading datatable skeleton', () => {
-    mockbills.mockReturnValueOnce({ isLoading: true, isValidating: false, error: null, bills: [], mutate: jest.fn() });
+    mockbills.mockReturnValueOnce({
+      isLoading: true,
+      isValidating: false,
+      error: null,
+      bills: [],
+      dateFilteredBills: [],
+      mutate: jest.fn(),
+    });
     render(<BillHistory {...testProps} />);
     const loadingSkeleton = screen.getByRole('table');
     expect(loadingSkeleton).toBeInTheDocument();
@@ -113,6 +120,7 @@ describe('BillHistory', () => {
       isValidating: false,
       error: new Error('some error'),
       bills: [],
+      dateFilteredBills: [],
       mutate: jest.fn(),
     });
     render(<BillHistory {...testProps} />);
@@ -127,6 +135,7 @@ describe('BillHistory', () => {
       isValidating: false,
       error: null,
       bills: mockBillsData as any,
+      dateFilteredBills: mockBillsData as any,
       mutate: jest.fn(),
     });
     render(<BillHistory {...testProps} />);
@@ -156,7 +165,14 @@ describe('BillHistory', () => {
   });
 
   test('should render empty state view when there are no bills', () => {
-    mockbills.mockReturnValueOnce({ isLoading: false, isValidating: false, error: null, bills: [], mutate: jest.fn() });
+    mockbills.mockReturnValueOnce({
+      isLoading: false,
+      isValidating: false,
+      error: null,
+      bills: [],
+      dateFilteredBills: [],
+      mutate: jest.fn(),
+    });
     render(<BillHistory {...testProps} />);
     const emptyState = screen.getByText(/There are no bills to display./);
     expect(emptyState).toBeInTheDocument();
