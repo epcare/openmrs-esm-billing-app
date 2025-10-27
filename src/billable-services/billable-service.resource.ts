@@ -36,7 +36,7 @@ export function useServiceTypes() {
 export const usePaymentModes = () => {
   const url = `${apiBasePath}paymentMode`;
 
-  const { data, error, isLoading } = useSWR<{ data: ResponseObject }>(url, openmrsFetch);
+  const { data, error, isLoading } = useSWR<{ data }>(url, openmrsFetch);
 
   return {
     paymentModes: data?.data.results ?? [],

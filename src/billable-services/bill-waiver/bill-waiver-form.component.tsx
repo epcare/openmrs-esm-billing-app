@@ -11,6 +11,7 @@ import { useBillableItems } from '../../billing-form/billing-form.resource';
 import type { LineItem, MappedBill } from '../../types';
 import { apiBasePath } from '../../constants';
 import styles from './bill-waiver-form.scss';
+import { usePaymentModes } from '../billable-service.resource';
 
 type BillWaiverFormProps = {
   bill: MappedBill;
@@ -24,6 +25,7 @@ const BillWaiverForm: React.FC<BillWaiverFormProps> = ({ bill, lineItems, setPat
   const { lineItems: billableLineItems, isLoading: isLoadingLineItems, error: lineError } = useBillableItems();
   const totalAmount = lineItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
   const { defaultCurrency } = useConfig();
+  const { isLoading, paymentModes } = usePaymentModes();
 
   if (lineItems?.length === 0) {
     return null;
@@ -35,6 +37,7 @@ const BillWaiverForm: React.FC<BillWaiverFormProps> = ({ bill, lineItems, setPat
       waiverAmount,
       totalAmount,
       lineItems,
+      paymentModes,
       billableLineItems,
     );
 

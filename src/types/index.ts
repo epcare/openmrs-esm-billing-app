@@ -17,6 +17,7 @@ export interface MappedBill {
   totalAmount?: number;
   tenderedAmount?: number;
   display?: string;
+  balance?: number;
 }
 
 interface LocationLink {
@@ -194,8 +195,15 @@ export interface BillableService {
   servicePrices: Array<{
     name: string;
     price: number;
+    paymentMode: PaymentMode;
   }>;
 }
+
+export interface PaymentMode {
+  uuid: string;
+  name: string;
+}
+
 export interface StockItem {
   uuid: string;
   drugUuid: string;
@@ -216,7 +224,7 @@ export interface CashierItem {
   billableService: BillableService;
 }
 
-export interface PaymentMode {
+export interface PaymentMethod {
   uuid: string;
   name: string;
   description: string;

@@ -4,7 +4,7 @@ import { apiBasePath } from '../constants';
 
 export const useBillableItems = () => {
   const url = `${apiBasePath}billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(display),servicePrices:(uuid,name,price,paymentMode))`;
-  const { data, isLoading, error } = useSWR<{ data: { results: Array<OpenmrsResource> } }>(url, openmrsFetch);
+  const { data, isLoading, error } = useSWR<{ data }>(url, openmrsFetch);
   return {
     lineItems: data?.data?.results ?? [],
     isLoading,
