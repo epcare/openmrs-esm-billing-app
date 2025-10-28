@@ -32,11 +32,12 @@ const BillableStock = () => {
   const { t } = useTranslation();
   const layout = useLayoutType();
   const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
+  const pageSizes = [10, 20, 30, 40, 50];
+  const [pageSize, setPageSize] = useState(10);
 
   const { billableCommodities: chargeItems, isLoading, isValidating, error } = useBillableCommodities();
 
   const [searchString, setSearchString] = useState('');
-  const [pageSize, setPageSize] = useState(10);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
@@ -64,11 +65,11 @@ const BillableStock = () => {
     return chargeItems.filter((item) => Object.values(item).some((val) => `${val}`.toLowerCase().includes(search)));
   }, [searchString, chargeItems]);
 
-  const { paginated, goTo, results, currentPage } = usePagination(searchResults, pageSize);
+  const { goTo, results: paginatedList, currentPage } = usePagination(searchResults, pageSize);
   const rowData = [];
 
-  if (results) {
-    results.forEach((item, index) => {
+  if (paginatedList) {
+    paginatedList.forEach((item, index) => {
       rowData.push({
         id: `${index}`,
         uuid: item.uuid,
@@ -179,26 +180,24 @@ const BillableStock = () => {
             </TableContainer>
           )}
         </DataTable>
-        {paginated && (
-          <Pagination
-            forwardText="Next page"
-            backwardText="Previous page"
-            page={currentPage}
-            pageSize={pageSize}
-            pageSizes={[10, 20, 30, 40, 50]}
-            totalItems={searchResults.length}
-            className={styles.pagination}
-            size={responsiveSize}
-            onChange={({ pageSize: newPageSize, page: newPage }) => {
-              if (newPageSize !== pageSize) {
-                setPageSize(newPageSize);
-              }
-              if (newPage !== currentPage) {
-                goTo(newPage);
-              }
-            }}
-          />
-        )}
+        <Pagination
+          forwardText="Next page"
+          backwardText="Previous page"
+          page={currentPage}
+          pageSize={pageSize}
+          pageSizes={[10, 20, 30, 40, 50]}
+          totalItems={searchResults?.length}
+          className={styles.pagination}
+          size={responsiveSize}
+          onChange={({ pageSize: newPageSize, page: newPage }) => {
+            if (newPageSize !== pageSize) {
+              setPageSize(newPageSize);
+            }
+            if (newPage !== currentPage) {
+              goTo(newPage);
+            }
+          }}
+        />
       </div>
 
       {showEditModal && (
