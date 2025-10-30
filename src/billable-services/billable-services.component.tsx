@@ -35,8 +35,8 @@ const BillableServices = () => {
   const config = useConfig();
   const [searchString, setSearchString] = useState('');
   const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
-  const pageSizes = config?.billableServices?.pageSizes ?? [10, 20, 30, 40, 50];
-  const [pageSize, setPageSize] = useState(config?.billableServices?.pageSize ?? 10);
+  const pageSizes = [10, 20, 30, 40, 50];
+  const [pageSize, setPageSize] = useState(10);
 
   const [showOverlay, setShowOverlay] = useState(false);
   const [editingService, setEditingService] = useState(null);
@@ -90,11 +90,11 @@ const BillableServices = () => {
     return flatBillableServices;
   }, [searchString, billableServices]);
 
-  const { paginated, goTo, results, currentPage } = usePagination<BillableService>(searchResults, pageSize);
+  const { goTo, results: paginatedList, currentPage } = usePagination(searchResults, pageSize);
   const rowData = [];
 
-  if (results) {
-    results.forEach((service, index) => {
+  if (paginatedList) {
+    paginatedList.forEach((service, index) => {
       const s = {
         id: `${index}`,
         uuid: service.uuid,
@@ -141,10 +141,10 @@ const BillableServices = () => {
   }, []);
 
   if (isLoading) {
-    <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
+    return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }
   if (error) {
-    <ErrorState headerTitle={t('billableService', 'Billable Service')} error={error} />;
+    return <ErrorState headerTitle={t('billableService', 'Billable Service')} error={error} />;
   }
   if (billableServices.length === 0) {
     <EmptyState
@@ -163,6 +163,7 @@ const BillableServices = () => {
             isValidating={isValidating}
             layout={layout}
             responsiveSize={responsiveSize}
+            searchString={searchString}
             t={t}
           />
           <DataTable
@@ -210,26 +211,24 @@ const BillableServices = () => {
               </Layer>
             </div>
           )}
-          {paginated && (
-            <Pagination
-              forwardText="Next page"
-              backwardText="Previous page"
-              page={currentPage}
-              pageSize={pageSize}
-              pageSizes={pageSizes}
-              totalItems={searchResults?.length}
-              className={styles.pagination}
-              size={responsiveSize}
-              onChange={({ pageSize: newPageSize, page: newPage }) => {
-                if (newPageSize !== pageSize) {
-                  setPageSize(newPageSize);
-                }
-                if (newPage !== currentPage) {
-                  goTo(newPage);
-                }
-              }}
-            />
-          )}
+          <Pagination
+            forwardText="Next page"
+            backwardText="Previous page"
+            page={currentPage}
+            pageSize={pageSize}
+            pageSizes={pageSizes}
+            totalItems={searchResults?.length}
+            className={styles.pagination}
+            size={responsiveSize}
+            onChange={({ pageSize: newPageSize, page: newPage }) => {
+              if (newPageSize !== pageSize) {
+                setPageSize(newPageSize);
+              }
+              if (newPage !== currentPage) {
+                goTo(newPage);
+              }
+            }}
+          />
         </div>
       ) : (
         <EmptyState
@@ -255,7 +254,7 @@ const BillableServices = () => {
   );
 };
 
-function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t }) {
+function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, searchString }) {
   return (
     <>
       <div className={styles.headerContainer}>
@@ -275,6 +274,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           labelText=""
           placeholder={t('filterTable', 'Filter table')}
           onChange={handleSearch}
+          value={searchString}
           size={responsiveSize}
         />
         <Button

@@ -10,10 +10,13 @@ type ResponseObject = {
 
 export const useBillableServices = () => {
   const url = `${apiBasePath}billableService?v=full`;
-  const { data, isLoading, isValidating, error, mutate } = useOpenmrsFetchAll<BillableService[]>(url);
+  const { data, isLoading, isValidating, error, mutate } = useSWR<{ data: { results: Array<BillableService> } }, Error>(
+    url,
+    openmrsFetch,
+  );
 
   return {
-    billableServices: data ?? [],
+    billableServices: data?.data?.results ?? [],
     isLoading,
     isValidating,
     error,
