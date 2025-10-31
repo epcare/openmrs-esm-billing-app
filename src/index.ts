@@ -8,7 +8,7 @@ import BillableServiceHome from './billable-services/billable-services-home.comp
 import BillableServicesCardLink from './billable-services-admin-card-link.component';
 import BillHistory from './bill-history/bill-history.component';
 import BillingCheckInForm from './billing-form/billing-checkin-form.component';
-import RequirePaymentModal from './modal/require-payment-modal.component';
+import RequirePaymentModal from './prompt-payment/prompt-payment.component';
 import RootComponent from './root.component';
 import ServiceMetrics from './billable-services/dashboard/service-metrics.component';
 import VisitAttributeTags from './invoice/payments/visit-tags/visit-attribute.component';

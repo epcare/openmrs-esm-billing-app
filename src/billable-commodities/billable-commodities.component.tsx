@@ -22,7 +22,7 @@ import {
 import { ArrowRight } from '@carbon/react/icons';
 import { useLayoutType, isDesktop, usePagination, ErrorState, showModal } from '@openmrs/esm-framework';
 import { EmptyState } from '@openmrs/esm-patient-common-lib';
-import { useBillableCommodities, useBillableServices } from '../billable-services/billable-service.resource';
+import { useBillableCommodities } from '../billable-services/billable-service.resource';
 import styles from '../billable-services/billable-services.scss';
 import AddBillableStock from './add-billable-commodity.component';
 import classNames from 'classnames';
@@ -51,7 +51,7 @@ const BillableStock = () => {
   ];
 
   const launchBillableCommoditiesForm = useCallback(() => {
-    const dispose = showModal('charge-item-modal', {
+    const dispose = showModal('require-billing-modal', {
       editingItem: null,
       onClose: () => dispose(),
     });

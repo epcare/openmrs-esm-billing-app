@@ -8,6 +8,12 @@
     {
       "component": "billableServicesHome",
       "route": "billable-services"
+    },
+    {
+      "component": "requirePaymentModal",
+      "routeRegex": "^patient\/.+\/chart",
+      "online": true,
+      "offline": false
     }
   ],
   "extensions": [
