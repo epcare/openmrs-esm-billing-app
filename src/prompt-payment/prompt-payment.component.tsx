@@ -41,6 +41,10 @@ const PromptPaymentModal: React.FC = () => {
     .flatMap((bill) => bill.lineItems)
     .filter((lineItem) => lineItem.paymentStatus !== 'PAID');
 
+  if (lineItems.length === 0) {
+    return null;
+  }
+
   return (
     <ComposedModal preventCloseOnClickOutside open={showModal.billingModal}>
       {isLoading ? (
