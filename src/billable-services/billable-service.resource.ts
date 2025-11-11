@@ -137,3 +137,14 @@ export const deleteBillableCommodity = (uuid: string) => {
     },
   });
 };
+
+export const deleteBillableService = (uuid: string) => {
+  const url = `${apiBasePath}billableService/${uuid}`;
+
+  return openmrsFetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+};
