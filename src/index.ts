@@ -16,6 +16,7 @@ import BillablesConfigurationTabs from './billable-services/billables-config-tab
 import BillableStock from './billable-commodities/billable-commodities.component';
 import AddBillableStock from './billable-commodities/add-billable-commodity.component';
 import DeleteBillableCommodity from './billable-commodities/delete-billable-commodity.component';
+import DeleteBillableService from './billable-services/delete-billable-service.component';
 
 const moduleName = '@epcare/esm-billing-app';
 
@@ -57,6 +58,8 @@ export const billableCommodities = getSyncLifecycle(BillableStock, options);
 export const billableCommoditiesModal = getSyncLifecycle(AddBillableStock, options);
 
 export const deleteBillableCommoditiesModal = getSyncLifecycle(DeleteBillableCommodity, options);
+
+export const deleteBillableServicesModal = getSyncLifecycle(DeleteBillableService, options);
 
 export const billingCheckInForm = getSyncLifecycle(BillingCheckInForm, options);
 

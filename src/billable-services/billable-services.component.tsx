@@ -27,6 +27,7 @@ import { type BillableService } from '../types/index';
 import { useBillableServices } from './billable-service.resource';
 import AddBillableService from './create-edit/add-billable-service.component';
 import styles from './billable-services.scss';
+import DeleteBillableService from './delete-billable-service.component';
 
 const BillableServices = () => {
   const { t } = useTranslation();
@@ -40,6 +41,8 @@ const BillableServices = () => {
 
   const [showOverlay, setShowOverlay] = useState(false);
   const [editingService, setEditingService] = useState(null);
+  const [deletingService, setDeletingService] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const headerData = [
     {
@@ -110,6 +113,12 @@ const BillableServices = () => {
                 itemText={t('editBillableService', 'Edit Billable Service')}
                 onClick={() => handleEditService(service)}
               />
+              <div className={styles.deleteItemContainer}>
+                <OverflowMenuItem
+                  itemText={t('deleteBillableService', 'Delete billable service')}
+                  onClick={() => handleDeleteService(service)}
+                />
+              </div>
             </OverflowMenu>
           </TableCell>
         ),
@@ -135,9 +144,19 @@ const BillableServices = () => {
     setShowOverlay(true);
   }, []);
 
+  const handleDeleteService = useCallback((service) => {
+    setDeletingService(service);
+    setShowDeleteModal(true);
+  }, []);
+
   const closeModal = useCallback(() => {
     setShowOverlay(false);
     setEditingService(null);
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    setShowDeleteModal(false);
+    setDeletingService(null);
   }, []);
 
   if (isLoading) {
@@ -248,6 +267,20 @@ const BillableServices = () => {
           size="lg"
           passiveModal={true}>
           <AddBillableService editingService={editingService} onClose={closeModal} />
+        </Modal>
+      )}
+
+      {showDeleteModal && (
+        <Modal
+          open={showDeleteModal}
+          modalHeading={t('deletebillableService', 'Delete billable service')}
+          primaryButtonText={null}
+          secondaryButtonText={t('cancel', 'Cancel')}
+          onRequestClose={closeDeleteModal}
+          onSecondarySubmit={closeDeleteModal}
+          size="md"
+          passiveModal={true}>
+          <DeleteBillableService deletingService={deletingService} onClose={closeDeleteModal} />
         </Modal>
       )}
     </>
