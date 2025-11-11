@@ -1,8 +1,8 @@
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import dayjs from 'dayjs';
 import isEmpty from 'lodash-es/isEmpty';
 import sortBy from 'lodash-es/sortBy';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import {
   formatDate,
   parseDate,
@@ -235,5 +235,21 @@ export function useFacilityName() {
     facility: data?.data?.value ?? '',
     isLoadingFacility: isLoading,
     isError: error,
+  };
+}
+
+export function usePatientBills(patientUuid: string) {
+  const apiUrl = patientUuid ? `${apiBasePath}bill?patientUuid=${patientUuid}&v=full` : null;
+
+  const { data, isLoading, error } = useSWR<{ data: { results: Array<PatientInvoice> } }, Error>(apiUrl, openmrsFetch);
+
+  const patientBills = useMemo(() => {
+    return data?.data?.results ?? [];
+  }, [data?.data?.results]);
+  return {
+    patientBills: patientBills ?? [],
+    isLoading,
+    error,
+    mutate,
   };
 }

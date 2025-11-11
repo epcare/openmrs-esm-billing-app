@@ -68,6 +68,12 @@ export const configSchema = {
     _description: 'Whether to show the edit bill button or not.',
     _default: false,
   },
+
+  enforceBillPayment: {
+    _type: Type.Boolean,
+    _description: 'Whether to enfore bill payment before providing care to a patient or not.',
+    _default: false,
+  },
 };
 
 export interface ConfigObject {
@@ -80,4 +86,5 @@ export interface ConfigObject {
   postBilledItems: Object;
   serviceTypes: string;
   nonPayingPatientCategories: Object;
+  enforceBillPayment: boolean;
 }
