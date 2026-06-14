@@ -82,7 +82,7 @@ export const configSchema = {
       'Service Type Concept Set UUID - This is an OpenMRS Concept Set UUID. The set members of this concept represent the different types of services that can be billed (e.g., Consultation, Lab Test, Procedure).',
     _default: {
       // Concept Set UUID - The concept set whose members represent the different service types that can be billed
-      billableService: '21b8cf43-9f9f-4d02-9f4a-d710ece54261',
+      billableService: '609afe4f-d539-4dfe-896d-0b9897d0ee4a',
     },
   },
   defaultCurrency: {
