@@ -13,13 +13,6 @@ window.i18next = { language: 'en-US' } as any;
 
 vi.mock('../../billing.resource', () => ({
   processBillPayment: vi.fn(),
-}));
-
-vi.mock('../../billable-services/billable-service.resource', () => ({
-  useBillableServices: vi.fn(),
-}));
-
-vi.mock('../../billing.resource', () => ({
   useStockItems: vi.fn().mockReturnValue({
     stockItems: [],
     isLoadingItem: false,
@@ -27,6 +20,10 @@ vi.mock('../../billing.resource', () => ({
     error: null,
     mutate: vi.fn(),
   }),
+}));
+
+vi.mock('../../billable-services/billable-service.resource', () => ({
+  useBillableServices: vi.fn(),
 }));
 
 describe('Payments', () => {
@@ -87,6 +84,10 @@ describe('Payments', () => {
     dateCreated: '2023-09-01T12:00:00Z',
     lineItems: [],
     billingService: 'Billing Service',
+    totalAmount: 260, // Sum of payments (80 + 180)
+    netAmount: 260,
+    tenderedAmount: 300, // Sum of amountTendered (100 + 200)
+    visitUuid: 'visit-uuid',
   };
 
   const mockMutate = vi.fn();
@@ -107,12 +108,17 @@ describe('Payments', () => {
     expect(screen.getByText('Total Tendered:')).toBeInTheDocument();
   });
 
-  it.skip('calculates and displays correct amounts', () => {
+  it('calculates and displays correct amounts', () => {
     render(<Payments bill={mockBill} mutate={mockMutate} selectedLineItems={mockSelectedLineItems} />);
-    const amountElements = screen.getAllByText('$1000.00');
-    expect(amountElements[amountElements.length - 3]).toBeInTheDocument();
-    expect(amountElements[amountElements.length - 2]).toBeInTheDocument();
-    expect(amountElements[amountElements.length - 1]).toBeInTheDocument();
+
+    // Verify total amount is displayed (totalAmount: 260)
+    expect(screen.getByText(/260/i)).toBeInTheDocument();
+
+    // Verify total tendered is displayed (tenderedAmount: 300)
+    expect(screen.getByText(/300/i)).toBeInTheDocument();
+
+    // Verify client balance is calculated correctly (300 - 260 = 40)
+    expect(screen.getByText(/40/i)).toBeInTheDocument();
   });
 
   it('disables Process Payment button when form is invalid', () => {

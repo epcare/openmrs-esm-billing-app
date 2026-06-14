@@ -23,7 +23,7 @@
   "root": true,
   "overrides": [
     {
-      "files": ["tools/**/*.ts", "vitest.config.ts", "__mocks__/**/*.ts", "e2e/**/*.ts", "playwright.config.ts", "test-helpers.tsx", "*.config.ts"],
+      "files": ["tools/**/*.ts", "vitest.config.ts", "__mocks__/**/*.ts", "e2e/**/*.ts", "playwright.config.ts", "test-helpers.tsx", "*.config.ts", "src/routes.json"],
       "parserOptions": {
         "project": null
       },

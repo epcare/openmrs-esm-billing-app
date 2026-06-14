@@ -124,10 +124,6 @@
       "component": "deletePaymentModeModal"
     },
     {
-      "name": "edit-bill-item-modal",
-      "component": "editBillLineItemModal"
-    },
-    {
       "name": "edit-bill-line-item-modal",
       "component": "editBillLineItemModal"
     },
