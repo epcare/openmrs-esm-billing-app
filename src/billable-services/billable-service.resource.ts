@@ -27,10 +27,12 @@ export const useBillableServices = () => {
 
 export function useServiceTypes() {
   const { serviceTypes } = useConfig<BillingConfig>();
-  const serviceConceptUuid = serviceTypes.billableService;
+  const DEFAULT_SERVICE_CONCEPT_UUID = '609afe4f-d539-4dfe-896d-0b9897d0ee4a';
+  const serviceConceptUuid = serviceTypes?.billableService ?? DEFAULT_SERVICE_CONCEPT_UUID;
+
   const url = `${restBaseUrl}/concept/${serviceConceptUuid}?v=custom:(setMembers:(uuid,display))`;
 
-  const { data, error, isLoading } = useSWR<{ data: { setMembers: Array<{ uuid: string; display: string }> } }>(
+  const { data, error, isLoading } = useSWR<{ data: { setMembers: Array<{ uuid: string; display: string }> } }, Error>(
     url,
     openmrsFetch,
   );
@@ -43,6 +45,7 @@ export function useServiceTypes() {
     serviceTypes: sortedServiceTypes,
     error,
     isLoadingServiceTypes: isLoading,
+    configUuid: serviceConceptUuid,
   };
 }
 
