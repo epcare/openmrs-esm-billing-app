@@ -1,31 +1,29 @@
 import React from 'react';
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useVisit, useConfig, navigate } from '@openmrs/esm-framework';
 import { useBillableServices } from '../../billable-services/billable-service.resource';
 import { type MappedBill, type LineItem } from '../../types';
 import Payments from './payments.component';
 import { useStockItems } from '../../billing.resource';
 
-// Add this mock for currency formatting
-const mockFormatToParts = jest.fn().mockReturnValue([{ type: 'integer', value: '1000' }]);
-const mockFormat = jest.fn().mockReturnValue('$1000.00');
-global.Intl.NumberFormat = jest.fn().mockImplementation(() => ({
-  formatToParts: mockFormatToParts,
-  format: mockFormat,
-})) as any;
-global.Intl.NumberFormat.supportedLocalesOf = jest.fn().mockReturnValue(['en-US']);
+// Mock window.i18next for locale
+window.i18next = { language: 'en-US' } as any;
 
-jest.mock('../../billing.resource', () => ({
-  processBillPayment: jest.fn(),
+vi.mock('../../billing.resource', () => ({
+  processBillPayment: vi.fn(),
+  useStockItems: vi.fn().mockReturnValue({
+    stockItems: [],
+    isLoadingItem: false,
+    isValidating: false,
+    error: null,
+    mutate: vi.fn(),
+  }),
 }));
 
-jest.mock('../../billable-services/billable-service.resource', () => ({
-  useBillableServices: jest.fn(),
-}));
-
-jest.mock('../../billing.resource', () => ({
-  useStockItems: jest.fn(),
+vi.mock('../../billable-services/billable-service.resource', () => ({
+  useBillableServices: vi.fn(),
 }));
 
 describe('Payments', () => {
@@ -86,17 +84,21 @@ describe('Payments', () => {
     dateCreated: '2023-09-01T12:00:00Z',
     lineItems: [],
     billingService: 'Billing Service',
+    totalAmount: 260, // Sum of payments (80 + 180)
+    netAmount: 260,
+    tenderedAmount: 300, // Sum of amountTendered (100 + 200)
+    visitUuid: 'visit-uuid',
   };
 
-  const mockMutate = jest.fn();
+  const mockMutate = vi.fn();
   const mockSelectedLineItems: LineItem[] = [];
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (useVisit as jest.Mock).mockReturnValue({ currentVisit: null });
-    (useConfig as jest.Mock).mockReturnValue({ defaultCurrency: 'USD' });
-    (useBillableServices as jest.Mock).mockReturnValue({ billableServices: [], isLoading: false });
-    (useStockItems as jest.Mock).mockReturnValue({ stockItems: [], isLoadingItem: false });
+    vi.clearAllMocks();
+    (useVisit as Mock).mockReturnValue({ currentVisit: null });
+    (useConfig as Mock).mockReturnValue({ defaultCurrency: 'USD' });
+    (useBillableServices as Mock).mockReturnValue({ billableServices: [], isLoading: false });
+    (useStockItems as Mock).mockReturnValue({ stockItems: [], isLoadingItem: false });
   });
 
   it('renders payment form and history', () => {
@@ -108,10 +110,15 @@ describe('Payments', () => {
 
   it('calculates and displays correct amounts', () => {
     render(<Payments bill={mockBill} mutate={mockMutate} selectedLineItems={mockSelectedLineItems} />);
-    const amountElements = screen.getAllByText('$1000.00');
-    expect(amountElements[amountElements.length - 3]).toBeInTheDocument();
-    expect(amountElements[amountElements.length - 2]).toBeInTheDocument();
-    expect(amountElements[amountElements.length - 1]).toBeInTheDocument();
+
+    // Verify total amount is displayed (totalAmount: 260)
+    expect(screen.getByText(/260/i)).toBeInTheDocument();
+
+    // Verify total tendered is displayed (tenderedAmount: 300)
+    expect(screen.getByText(/300/i)).toBeInTheDocument();
+
+    // Verify client balance is calculated correctly (300 - 260 = 40)
+    expect(screen.getByText(/40/i)).toBeInTheDocument();
   });
 
   it('disables Process Payment button when form is invalid', () => {
