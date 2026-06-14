@@ -7,10 +7,6 @@ import { updateBillItems, useStockItems } from '../billing.resource';
 import ChangeStatus from './edit-bill-item.component';
 
 // Mock external dependencies
-vi.mock('../billing.resource', () => ({
-  updateBillItems: vi.fn(() => Promise.resolve({})),
-}));
-
 vi.mock('@openmrs/esm-framework', () => ({
   showSnackbar: vi.fn(),
   restBaseUrl: 'http://localhost',
@@ -23,8 +19,8 @@ vi.mock('../billable-services/billable-service.resource', () => ({
 }));
 
 vi.mock('../billing.resource', () => ({
-  useStockItems: vi.fn(),
-  updateBillItems: vi.fn(),
+  updateBillItems: vi.fn(() => Promise.resolve({})),
+  useStockItems: vi.fn(() => ({ stockItems: [], isLoadingItem: false })),
 }));
 
 const mockBill: MappedBill = {
