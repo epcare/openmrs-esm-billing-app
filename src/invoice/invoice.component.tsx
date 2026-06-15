@@ -161,9 +161,7 @@ const Invoice: React.FC = () => {
    * t('invoiceStatus', 'Invoice status')
    */
   const invoiceDetails: Record<string, string | number | undefined> = {
-    [t('dateBillCreated', 'Date bill created')]: bill?.dateCreated
-      ? formatDate(parseDate(bill.dateCreated), { mode: 'wide' })
-      : '--',
+    [t('dateBillCreated', 'Date bill created')]: bill?.dateCreated ? bill.dateCreated : '--',
     [t('totalAmount', 'Total amount')]: convertToCurrency(bill?.totalAmount, defaultCurrency),
     ...(hasApprovedDiscount
       ? {

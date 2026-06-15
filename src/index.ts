@@ -25,7 +25,7 @@ import { dashboardMeta } from './dashboard.meta';
 import { createBillableCommoditiesLeftPanelLink } from './billable-commodities/billable-commodities-left-panel-link.component';
 import BillableCommoditiesHome from './billable-commodities/billable-commodities-home.component';
 
-const moduleName = '@openmrs/esm-billing-app';
+const moduleName = '@epcare/esm-billing-app';
 
 const options = {
   featureName: 'billing',
