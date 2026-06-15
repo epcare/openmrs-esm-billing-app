@@ -98,7 +98,7 @@ const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ bill, patient, comp
 
   return (
     <div className={styles.container} ref={componentRef}>
-      <PrintableInvoiceHeader patientDetails={patientDetails} facility={defaultFacility.display} />
+      <PrintableInvoiceHeader patientDetails={patientDetails} facility={defaultFacility?.display || '--'} />
 
       <div className={styles.itemsContainer}>
         <div className={styles.tableContainer}>

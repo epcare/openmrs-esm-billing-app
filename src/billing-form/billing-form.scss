@@ -1,4 +1,5 @@
 @use '@carbon/layout';
+@use '@carbon/type';
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
 .tablet {
@@ -77,6 +78,9 @@
 
 .grid {
   margin: layout.$spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: layout.$spacing-05;
 }
 
 .row {
@@ -88,4 +92,190 @@
 
 .spacer {
   margin-top: layout.$spacing-05;
+}
+
+.existingItemsContainer {
+  padding: layout.$spacing-05;
+  background-color: $ui-01;
+  border: 1px solid $ui-03;
+  border-radius: layout.$spacing-02;
+
+  .existingItemRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: layout.$spacing-03 0;
+    border-bottom: 1px solid $ui-03;
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+
+    .existingItemName {
+      @include type.type-style('body-compact-01');
+      flex: 1;
+      color: $text-02;
+    }
+
+    .existingItemDetail {
+      @include type.type-style('body-compact-01');
+      flex: 0 0 auto;
+      color: $text-02;
+      margin: 0 layout.$spacing-05;
+    }
+
+    .existingItemTotal {
+      @include type.type-style('heading-compact-01');
+      flex: 0 0 auto;
+      color: $text-02;
+    }
+  }
+
+  .existingItemsSubtotal {
+    @include type.type-style('body-compact-01');
+    text-align: right;
+    padding-top: layout.$spacing-04;
+    border-top: 1px solid $ui-03;
+    margin-top: layout.$spacing-03;
+    color: $text-02;
+  }
+}
+
+.sectionHeading {
+  @include type.type-style('heading-compact-02');
+  margin-bottom: layout.$spacing-04;
+  color: $text-02;
+}
+
+.selectedItemsContainer {
+  margin-top: layout.$spacing-05;
+
+  .itemCard {
+    border: 1px solid $ui-03;
+    border-radius: layout.$spacing-02;
+    padding: layout.$spacing-05;
+    margin-bottom: layout.$spacing-05;
+    background-color: $ui-01;
+
+    .itemHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: layout.$spacing-05;
+
+      .itemName {
+        font-weight: 600;
+        font-size: 1rem;
+        color: $text-02;
+      }
+    }
+
+      .itemControls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: layout.$spacing-05;
+      margin-top: layout.$spacing-03;
+      align-items: flex-end;      .controlSection {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+
+        &:first-child {
+          flex: 1 1 auto;
+          min-width: 250px;
+        }
+
+        &:nth-child(2) {
+          flex: 0 0 140px;
+          width: 140px;
+        }
+
+        &:last-child {
+          flex: 0 0 180px;
+          width: 180px;
+          margin-left: auto;
+          text-align: right;
+        }
+
+        label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          margin-bottom: layout.$spacing-03;
+          color: $text-02;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        :global(.cds--list-box),
+        :global(.cds--number),
+        :global(.cds--combo-box),
+        :global(.cds--list-box__wrapper),
+        :global(.cds--list-box__field) {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .priceDisplay,
+        .totalDisplay {
+          font-size: 0.875rem;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: $text-02;
+          padding: layout.$spacing-03 0;
+          word-break: break-word;
+        }
+      }
+    }
+  }
+
+  .grandTotal {
+    text-align: right;
+    padding: layout.$spacing-05;
+    border-top: 2px solid $interactive-01;
+    margin-top: layout.$spacing-05;
+    background-color: $ui-01;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: $text-02;
+  }
+}
+
+@media (max-width: 1056px) {
+  .selectedItemsContainer {
+    .itemCard {
+      .itemControls {
+        .controlSection {
+          &:nth-child(2) {
+            flex: 1 1 100%;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .selectedItemsContainer {
+    .itemCard {
+      padding: layout.$spacing-04;
+
+      .itemControls {
+        flex-direction: column;
+        gap: layout.$spacing-03;
+
+        .controlSection {
+          &:first-child,
+          &:nth-child(2),
+          &:last-child {
+            flex: 1 1 100%;
+            width: 100%;
+            max-width: 100%;
+          }
+        }
+      }
+    }
+  }
 }

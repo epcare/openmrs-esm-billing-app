@@ -77,14 +77,17 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
       .filter(Boolean)
       .join(' & ');
 
-  const rowData = results?.map((bill) => ({
-    id: bill.uuid,
-    uuid: bill.uuid,
-    billTotal: convertToCurrency(bill?.totalAmount, defaultCurrency),
-    billDate: formatDate(parseDate(bill.dateCreated), { mode: 'wide' }),
-    invoiceNumber: bill.receiptNumber,
-    billedItems: setBilledItems(bill),
-  }));
+  const rowData = results?.map((bill) => {
+    const parsedDate = parseDate(bill.dateCreatedRaw);
+    return {
+      id: bill.uuid,
+      uuid: bill.uuid,
+      billTotal: convertToCurrency(bill?.totalAmount, defaultCurrency),
+      billDate: parsedDate ? formatDate(parsedDate, { mode: 'wide' }) : '--',
+      invoiceNumber: bill.receiptNumber || '--',
+      billedItems: setBilledItems(bill),
+    };
+  });
 
   if (isLoading) {
     return (
