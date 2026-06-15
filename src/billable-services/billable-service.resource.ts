@@ -181,7 +181,7 @@ export const createBillableCommodity = (payload: any) => {
 export function useBillableCommodities() {
   const apiURL = `${apiBasePath}cashierItemPrice?v=default`;
 
-  const { data, error, isLoading, isValidating } = useSWR<{ data: { results: Array<CashierItem> } }, Error>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<{ data: { results: Array<CashierItem> } }, Error>(
     apiURL,
     openmrsFetch,
   );
@@ -195,6 +195,7 @@ export function useBillableCommodities() {
     error,
     isLoading,
     isValidating,
+    mutate,
   };
 }
 

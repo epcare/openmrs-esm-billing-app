@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import classNames from 'classnames';
 import {
   Button,
   DataTable,
   InlineLoading,
   Layer,
-  Modal,
   OverflowMenu,
   OverflowMenuItem,
   Pagination,
@@ -20,78 +20,88 @@ import {
   Tile,
 } from '@carbon/react';
 import { ArrowRight } from '@carbon/react/icons';
-import { useLayoutType, isDesktop, usePagination, ErrorState, showModal, EmptyCard } from '@openmrs/esm-framework';
-import { useBillableCommodities, useBillableServices } from '../billable-services/billable-service.resource';
+import {
+  useLayoutType,
+  isDesktop,
+  useConfig,
+  usePagination,
+  ErrorState,
+  EmptyCard,
+  launchWorkspace2,
+} from '@openmrs/esm-framework';
+import { type BillableCommodity } from '../types/index';
+import { useBillableCommodities } from '../billable-services/billable-service.resource';
 import styles from '../billable-services/billable-services.scss';
-import AddBillableStock from './add-billable-commodity.component';
-import classNames from 'classnames';
-import DeleteBillableCommodity from './delete-billable-commodity.component';
 
-const BillableStock = () => {
+const BillableCommodities = () => {
   const { t } = useTranslation();
+  const { billableCommodities, isLoading, isValidating, error, mutate } = useBillableCommodities();
   const layout = useLayoutType();
+  const config = useConfig();
+  const [searchString, setSearchString] = useState('');
   const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
   const pageSizes = [10, 20, 30, 40, 50];
   const [pageSize, setPageSize] = useState(10);
 
-  const { billableCommodities: chargeItems, isLoading, isValidating, error } = useBillableCommodities();
-
-  const [searchString, setSearchString] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [deletingItem, setDeletingItem] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-
   const headerData = [
-    { header: t('itemName', 'Item Name'), key: 'itemName' },
-    { header: t('price', 'Price'), key: 'price' },
-    { header: t('paymentMode', 'Payment Mode'), key: 'paymentMode' },
-    { header: t('actions', 'Actions'), key: 'actions' },
+    {
+      header: t('itemName', 'Item Name'),
+      key: 'itemName',
+    },
+    {
+      header: t('shortName', 'Short Name'),
+      key: 'shortName',
+    },
+    {
+      header: t('paymentMode', 'Payment Mode'),
+      key: 'paymentMode',
+    },
+    {
+      header: t('price', 'Price'),
+      key: 'price',
+    },
   ];
 
   const launchBillableCommoditiesForm = useCallback(() => {
-    const dispose = showModal('charge-item-modal', {
-      editingItem: null,
-      onClose: () => dispose(),
+    launchWorkspace2('billable-commodity-form', {
+      onWorkspaceClose: mutate,
     });
-  }, []);
+  }, [mutate]);
 
-  const searchResults = useMemo(() => {
-    if (!chargeItems) return [];
-    if (searchString.trim() === '') return chargeItems;
+  const searchResults: BillableCommodity[] = useMemo(() => {
+    const flatBillableCommodities = Array.isArray(billableCommodities)
+      ? billableCommodities.flat()
+      : billableCommodities;
 
-    const search = searchString.toLowerCase();
-    return chargeItems.filter((item) => Object.values(item).some((val) => `${val}`.toLowerCase().includes(search)));
-  }, [searchString, chargeItems]);
+    if (flatBillableCommodities !== undefined && flatBillableCommodities.length > 0) {
+      if (searchString && searchString.trim() !== '') {
+        const search = searchString.toLowerCase();
+        return flatBillableCommodities.filter((commodity: BillableCommodity) =>
+          Object.entries(commodity).some(([header, value]) => {
+            return header === 'uuid' ? false : `${value}`.toLowerCase().includes(search);
+          }),
+        );
+      }
+    }
+    return flatBillableCommodities;
+  }, [searchString, billableCommodities]);
 
   const { goTo, results: paginatedList, currentPage } = usePagination(searchResults, pageSize);
   const rowData = [];
 
   if (paginatedList) {
-    paginatedList.forEach((item, index) => {
-      rowData.push({
+    paginatedList.forEach((commodity, index) => {
+      const c = {
         id: `${index}`,
-        uuid: item.uuid,
-        itemName: item.item || '--',
-        price: item.price ?? '--',
-        paymentMode: item.paymentMode?.name || '--',
-        actions: (
-          <TableCell>
-            <OverflowMenu size="sm" flipped>
-              <OverflowMenuItem
-                itemText={t('editBillableCommodity', 'Edit billable commodity')}
-                onClick={() => handleEditItem(item)}
-              />
-              <div className={styles.deleteItemContainer}>
-                <OverflowMenuItem
-                  itemText={t('deleteBillableCommodity', 'Delete billable commodity')}
-                  onClick={() => handleDeleteItem(item)}
-                />
-              </div>
-            </OverflowMenu>
-          </TableCell>
-        ),
-      });
+        uuid: commodity.uuid,
+        itemName: commodity.item || '--',
+        shortName: commodity.shortName || '--',
+        paymentMode: commodity?.paymentMode?.name || '--',
+        price: '--',
+      };
+      c.price =
+        commodity.price && commodity.paymentMode?.name ? `${commodity.paymentMode.name} (${commodity.price})` : '--';
+      rowData.push(c);
     });
   }
 
@@ -100,40 +110,30 @@ const BillableStock = () => {
       goTo(1);
       setSearchString(e.target.value);
     },
-    [goTo],
+    [goTo, setSearchString],
   );
 
-  const handleEditItem = useCallback((item) => {
-    setEditingItem(item);
-    setShowEditModal(true);
-  }, []);
-
-  const handleDeleteItem = useCallback((item) => {
-    setDeletingItem(item);
-    setShowDeleteModal(true);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setShowEditModal(false);
-    setEditingItem(null);
-  }, []);
-
-  const closeDeleteModal = useCallback(() => {
-    setShowDeleteModal(false);
-    setDeletingItem(null);
-  }, []);
+  const handleEditCommodity = useCallback(
+    (commodity: BillableCommodity) => {
+      launchWorkspace2('billable-commodity-form', {
+        itemToEdit: commodity,
+        onWorkspaceClose: mutate,
+      });
+    },
+    [mutate],
+  );
 
   if (isLoading) {
     return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }
   if (error) {
-    return <ErrorState headerTitle={t('billableCommodity', 'Billable commodity')} error={error} />;
+    return <ErrorState headerTitle={t('billableCommodity', 'Billable Commodity')} error={error} />;
   }
-  if (!chargeItems || chargeItems.length === 0) {
+  if (billableCommodities.length === 0) {
     return (
       <EmptyCard
-        displayText={t('billableCommodity', 'Billable commodity')}
-        headerTitle={t('billableCommodity', 'Billable commodity')}
+        displayText={t('billableCommodity', 'Billable Commodity')}
+        headerTitle={t('billableCommodity', 'Billable Commodity')}
         launchForm={launchBillableCommoditiesForm}
       />
     );
@@ -141,96 +141,112 @@ const BillableStock = () => {
 
   return (
     <>
-      <div className={styles.serviceContainer}>
-        <FilterableTableHeader
-          handleSearch={handleSearch}
-          isValidating={isValidating}
-          layout={layout}
-          responsiveSize={responsiveSize}
-          t={t}
-          onAddNew={() => setShowEditModal(true)}
-        />
-        <DataTable
-          isSortable
-          rows={rowData}
-          headers={headerData}
-          size={responsiveSize}
-          useZebraStyles={rowData?.length > 1}>
-          {({ rows, headers, getRowProps, getTableProps }) => (
-            <TableContainer>
-              <Table {...getTableProps()} aria-label="charge item list">
-                <TableHead>
-                  <TableRow>
-                    {headers.map((header) => (
-                      <TableHeader key={header.key}>{header.header}</TableHeader>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.id} {...getRowProps({ row })}>
-                      {row.cells.map((cell) => (
-                        <TableCell key={cell.id}>{cell.value}</TableCell>
+      {billableCommodities?.length > 0 ? (
+        <div className={styles.serviceContainer}>
+          <FilterableTableHeader
+            handleSearch={handleSearch}
+            isValidating={isValidating}
+            layout={layout}
+            responsiveSize={responsiveSize}
+            searchString={searchString}
+            t={t}
+            launchForm={launchBillableCommoditiesForm}
+          />
+          <DataTable
+            isSortable
+            rows={rowData}
+            headers={headerData}
+            size={responsiveSize}
+            useZebraStyles={rowData?.length > 1 ? true : false}
+            overflowMenuOnHover={isDesktop(layout)}>
+            {({ rows, headers, getRowProps, getTableProps, getHeaderProps }) => (
+              <TableContainer>
+                <Table {...getTableProps()} aria-label="commodity list">
+                  <TableHead>
+                    <TableRow>
+                      {headers.map((header) => (
+                        <TableHeader
+                          {...getHeaderProps({
+                            header,
+                          })}
+                          key={header.key}>
+                          {header.header}
+                        </TableHeader>
                       ))}
+                      <TableHeader aria-label={t('actions', 'Actions')} />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        {...getRowProps({
+                          row,
+                        })}>
+                        {row.cells.map((cell) => (
+                          <TableCell key={cell.id}>{cell.value}</TableCell>
+                        ))}
+                        <TableCell className="cds--table-column-menu">
+                          <OverflowMenu size="lg" flipped>
+                            <OverflowMenuItem
+                              className={styles.menuItem}
+                              itemText={t('editBillableCommodity', 'Edit billable commodity')}
+                              onClick={() =>
+                                handleEditCommodity(paginatedList.find((commodity) => commodity.uuid === row.id))
+                              }
+                            />
+                          </OverflowMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </DataTable>
+          {searchResults?.length === 0 && (
+            <div className={styles.filterEmptyState}>
+              <Layer level={0}>
+                <Tile className={styles.filterEmptyStateTile}>
+                  <p className={styles.filterEmptyStateContent}>
+                    {t('noMatchingCommoditiesToDisplay', 'No matching commodities to display')}
+                  </p>
+                  <p className={styles.filterEmptyStateHelper}>{t('checkFilters', 'Check the filters above')}</p>
+                </Tile>
+              </Layer>
+            </div>
           )}
-        </DataTable>
-        <Pagination
-          forwardText="Next page"
-          backwardText="Previous page"
-          page={currentPage}
-          pageSize={pageSize}
-          pageSizes={[10, 20, 30, 40, 50]}
-          totalItems={searchResults?.length}
-          className={styles.pagination}
-          size={responsiveSize}
-          onChange={({ pageSize: newPageSize, page: newPage }) => {
-            if (newPageSize !== pageSize) {
-              setPageSize(newPageSize);
-            }
-            if (newPage !== currentPage) {
-              goTo(newPage);
-            }
-          }}
+          <Pagination
+            forwardText="Next page"
+            backwardText="Previous page"
+            page={currentPage}
+            pageSize={pageSize}
+            pageSizes={pageSizes}
+            totalItems={searchResults?.length}
+            className={styles.pagination}
+            size={responsiveSize}
+            onChange={({ pageSize: newPageSize, page: newPage }) => {
+              if (newPageSize !== pageSize) {
+                setPageSize(newPageSize);
+              }
+              if (newPage !== currentPage) {
+                goTo(newPage);
+              }
+            }}
+          />
+        </div>
+      ) : (
+        <EmptyCard
+          launchForm={launchBillableCommoditiesForm}
+          displayText={t('noCommoditiesToDisplay', 'There are no commodities to display')}
+          headerTitle={t('billableCommodity', 'Billable Commodity')}
         />
-      </div>
-
-      {showEditModal && (
-        <Modal
-          open={showEditModal}
-          modalHeading={t('billableCommodity', 'Billable commodity')}
-          primaryButtonText={null}
-          secondaryButtonText={t('cancel', 'Cancel')}
-          onRequestClose={closeModal}
-          onSecondarySubmit={closeModal}
-          size="lg"
-          passiveModal={true}>
-          <AddBillableStock editingItem={editingItem} onClose={closeModal} />
-        </Modal>
-      )}
-
-      {showDeleteModal && (
-        <Modal
-          open={showDeleteModal}
-          modalHeading={t('deletebillableCommodity', 'Delete Billable commodity')}
-          primaryButtonText={null}
-          secondaryButtonText={t('cancel', 'Cancel')}
-          onRequestClose={closeDeleteModal}
-          onSecondarySubmit={closeDeleteModal}
-          size="md"
-          passiveModal={true}>
-          <DeleteBillableCommodity deletingItem={deletingItem} onClose={closeDeleteModal} />
-        </Modal>
       )}
     </>
   );
 };
 
-function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, onAddNew }) {
+function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, searchString, launchForm }) {
   return (
     <>
       <div className={styles.headerContainer}>
@@ -239,7 +255,7 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
             [styles.tabletHeading]: !isDesktop(layout),
             [styles.desktopHeading]: isDesktop(layout),
           })}>
-          <h4>{t('commodityList', 'Commodity list')}</h4>
+          <h4>{t('commoditiesList', 'Commodities list')}</h4>
         </div>
         <div className={styles.backgroundDataFetchingIndicator}>
           <span>{isValidating ? <InlineLoading /> : null}</span>
@@ -250,19 +266,19 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           labelText=""
           placeholder={t('filterTable', 'Filter table')}
           onChange={handleSearch}
+          value={searchString}
           size={responsiveSize}
         />
         <Button
           size={responsiveSize}
           kind="primary"
           renderIcon={(props) => <ArrowRight size={16} {...props} />}
-          onClick={onAddNew}
-          iconDescription={t('addNewCommodity', 'Add new commodity')}>
+          onClick={launchForm}
+          iconDescription={t('addNewBillableCommodity', 'Add new billable commodity')}>
           {t('addNewCommodity', 'Add new commodity')}
         </Button>
       </div>
     </>
   );
 }
-
-export default BillableStock;
+export default BillableCommodities;

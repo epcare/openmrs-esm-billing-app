@@ -22,6 +22,8 @@ import RootComponent from './root.component';
 import PaymentStatusTag from './payment-status-tag/payment-status-tag.component';
 import { configSchema } from './config-schema';
 import { dashboardMeta } from './dashboard.meta';
+import { createBillableCommoditiesLeftPanelLink } from './billable-commodities/billable-commodities-left-panel-link.component';
+import BillableCommoditiesHome from './billable-commodities/billable-commodities-home.component';
 
 const moduleName = '@openmrs/esm-billing-app';
 
@@ -55,6 +57,9 @@ export const billableServicesCardLink = getSyncLifecycle(BillableServicesCardLin
 
 export const billableServicesHome = getSyncLifecycle(BillableServiceHome, options);
 
+// t('billableCommodities', 'Billable commodities')
+export const billableCommoditiesHome = getSyncLifecycle(BillableCommoditiesHome, options);
+
 export const billingCheckInForm = getSyncLifecycle(BillingCheckInForm, options);
 
 export const billingPatientSummary = getSyncLifecycle(BillHistory, options);
@@ -84,11 +89,27 @@ export const billableServiceFormWorkspace = getAsyncLifecycle(
   options,
 );
 
+export const billableCommodityFormWorkspace = getAsyncLifecycle(
+  () => import('./billable-commodities/billable-commodity-form.workspace'),
+  options,
+);
+
 // t('billableServices', 'Billable services')
 export const billableServicesLeftPanelLink = getSyncLifecycle(
   createBillableServicesLeftPanelLink({
     name: 'billable-services',
     title: 'billableServices',
+    path: '',
+    icon: Wallet,
+  }),
+  options,
+);
+
+// t('billableCommodities', 'Billable commodities')
+export const billableCommoditiesLeftPanelLink = getSyncLifecycle(
+  createBillableCommoditiesLeftPanelLink({
+    name: 'billable-commodities',
+    title: 'billableCommodities',
     path: '',
     icon: Wallet,
   }),

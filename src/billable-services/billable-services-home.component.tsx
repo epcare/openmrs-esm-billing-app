@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SideNav, SideNavItems, SideNavLink, SideNavMenu, SideNavMenuItem } from '@carbon/react';
-import { Wallet, Money, Settings, ReportData } from '@carbon/react/icons';
+import { Wallet, Money, Settings, ReportData, Cube } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
 import { UserHasAccess, navigate } from '@openmrs/esm-framework';
 import AddBillableService from './create-edit/add-billable-service.component';
@@ -12,6 +12,7 @@ import CashPointConfiguration from './cash-point/cash-point-configuration.compon
 import PaymentModesConfig from './payyment-modes/payment-modes-config.component';
 import styles from './billable-services.scss';
 import BillingReports from './bill-report/billing-reports.component';
+import BillableCommodities from '../billable-commodities/billable-commodities.component';
 
 const BillableServiceHome: React.FC = () => {
   const { t } = useTranslation();
@@ -33,6 +34,9 @@ const BillableServiceHome: React.FC = () => {
             <SideNavItems>
               <SideNavLink onClick={() => handleNavigation('')} renderIcon={Wallet} isActive>
                 {t('billableServices', 'Billable Services')}
+              </SideNavLink>
+              <SideNavLink onClick={() => handleNavigation('billable-commodities')} renderIcon={Cube}>
+                {t('billableCommodities', 'Billable Commodities')}
               </SideNavLink>
               <UserHasAccess privilege="coreapps.systemAdministration">
                 <SideNavLink onClick={() => handleNavigation('waive-bill')} renderIcon={Money}>
@@ -58,6 +62,7 @@ const BillableServiceHome: React.FC = () => {
           <Routes>
             <Route path="/" element={<BillableServicesDashboard />} />
             <Route path="/add-service" element={<AddBillableService onClose={handleCloseAddService} />} />
+            <Route path="/billable-commodities" element={<BillableCommodities />} />
             <Route path="/waive-bill" element={<BillWaiver />} />
             <Route path="/cash-point-config" element={<CashPointConfiguration />} />
             <Route path="/payment-modes-config" element={<PaymentModesConfig />} />

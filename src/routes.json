@@ -8,6 +8,10 @@
     {
       "component": "billableServicesHome",
       "route": "billable-services"
+    },
+    {
+      "component": "billableCommoditiesHome",
+      "route": "billable-commodities"
     }
   ],
   "extensions": [
@@ -92,6 +96,12 @@
       "order": 0
     },
     {
+      "name": "billable-commodities-left-panel-link",
+      "component": "billableCommoditiesLeftPanelLink",
+      "slot": "billable-commodities-left-panel-slot",
+      "order": 0
+    },
+    {
       "name": "billing-settings-left-panel-menu",
       "component": "billingSettingsLeftPanelMenu",
       "slot": "billable-services-left-panel-slot",
@@ -158,6 +168,11 @@
       "name": "billable-service-form",
       "component": "billableServiceFormWorkspace",
       "window": "billable-service-form-window"
+    },
+    {
+      "name": "billable-commodity-form",
+      "component": "billableCommodityFormWorkspace",
+      "window": "billable-commodity-form-window"
     }
   ],
   "workspaceWindows2": [
@@ -167,6 +182,11 @@
     },
     {
       "name": "billable-service-form-window",
+      "group": "billingFormWorkspaceGroup",
+      "width": "wider"
+    },
+    {
+      "name": "billable-commodity-form-window",
       "group": "billingFormWorkspaceGroup",
       "width": "wider"
     }
