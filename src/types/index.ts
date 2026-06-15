@@ -250,6 +250,21 @@ export interface BillableService {
   servicePrices: Array<ServicePrice>;
 }
 
+export interface BillableCommodity {
+  uuid: string;
+  display?: string;
+  name?: string;
+  item: string;
+  shortName?: string;
+  price: number;
+  paymentMode?: {
+    uuid: string;
+    name: string;
+    description?: string;
+  };
+  billableService?: BillableService;
+}
+
 export type PaymentRequestPayload = {
   instanceType: string;
   amountTendered: number;

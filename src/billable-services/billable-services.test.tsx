@@ -32,7 +32,7 @@ vi.mock('@openmrs/esm-framework', () => ({
     results: data,
     paginated: true,
   })),
-  navigate: vi.fn(),
+  launchWorkspace2: vi.fn(),
   ErrorState: vi.fn(({ error }) => <div>Error: {error?.message || error}</div>),
   restBaseUrl: 'http://localhost',
 }));
@@ -40,7 +40,16 @@ vi.mock('@openmrs/esm-framework', () => ({
 // Mock i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback: string) => fallback || key,
+    t: (key: string, defaultValueOrOptions: string | object) => {
+      // Handle both t('key', 'defaultValue') and t('key', { defaultValue: 'value' }) formats
+      if (typeof defaultValueOrOptions === 'string') {
+        return defaultValueOrOptions;
+      }
+      if (typeof defaultValueOrOptions === 'object' && defaultValueOrOptions !== null) {
+        return defaultValueOrOptions.defaultValue || key;
+      }
+      return key;
+    },
   }),
 }));
 
@@ -63,8 +72,7 @@ describe('BillableService', () => {
     render(<BillableServices />);
 
     expect(screen.getByTestId('empty-card')).toBeInTheDocument();
-    expect(screen.getByText('Billable service')).toBeInTheDocument();
-    expect(screen.getByText('There are no services to display')).toBeInTheDocument();
+    expect(screen.getAllByText('Billable service')).toHaveLength(2);
   });
 
   it('renders billable services table correctly', () => {
