@@ -3,8 +3,6 @@ import { type PatientDetails } from '../../types';
 import { useConfig, useSession } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
 import styles from './printable-invoice-header.scss';
-import type { BillingConfig } from '../../config-schema';
-
 interface PrintableInvoiceHeaderProps {
   patientDetails: PatientDetails;
   facility: string;
@@ -12,7 +10,7 @@ interface PrintableInvoiceHeaderProps {
 
 const PrintableInvoiceHeader: React.FC<PrintableInvoiceHeaderProps> = ({ patientDetails, facility }) => {
   const { t } = useTranslation();
-  const config = useConfig<BillingConfig>();
+  const { logo } = useConfig({ externalModuleName: '@ugandaemr/esm-login-app' });
   const { sessionLocation } = useSession();
   const location = sessionLocation?.display;
 
@@ -20,10 +18,7 @@ const PrintableInvoiceHeader: React.FC<PrintableInvoiceHeaderProps> = ({ patient
     <div className={styles.container}>
       <div className={styles.printableHeader}>
         <p className={styles.heading}>{t('invoice', 'Invoice')}</p>
-        {config?.logo?.src && (
-          <img className={styles.img} width={110} height={40} src={config.logo.src} alt={config.logo.alt} />
-        )}
-        {config?.country && <p className={styles.country}>{config.country}</p>}
+        {logo?.src && <img className={styles.img} width={110} height={40} src={logo.src} alt={logo.alt} />}
       </div>
 
       <div className={styles.printableBody}>

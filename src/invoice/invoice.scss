@@ -7,6 +7,14 @@
   height: calc(100vh - layout.$spacing-09);
 }
 
+.actionsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: layout.$spacing-03;
+  padding: layout.$spacing-04 layout.$spacing-05;
+}
+
 .errorContainer {
   margin: layout.$spacing-05;
 }
@@ -27,8 +35,12 @@
   flex-flow: row wrap;
   align-items: center;
   justify-content: space-between;
-  margin: layout.$spacing-05;
+  margin: layout.$spacing-05 layout.$spacing-06;
   row-gap: layout.$spacing-06;
+}
+
+.invoiceContent {
+  margin: layout.$spacing-05;
 }
 
 .label {
@@ -78,10 +90,12 @@
   color: colors.$cool-gray-90;
 }
 
-@media screen {
-  .printContainer {
-    background-color: colors.$white;
-    display: none;
+.printContainer {
+  background-color: colors.$white;
+  display: none;
+
+  @media print {
+    display: block !important;
   }
 }
 

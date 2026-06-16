@@ -3,109 +3,116 @@ import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { navigate, showSnackbar, useConfig, useVisit, CardHeader } from '@openmrs/esm-framework';
 import { Button } from '@carbon/react';
-import { type LineItem, type MappedBill } from '../../types';
+import { CardHeader, navigate, showSnackbar, useConfig, useVisit } from '@openmrs/esm-framework';
+import { useSWRConfig } from 'swr';
+import { type MappedBill } from '../../types';
 import { convertToCurrency } from '../../helpers';
-import { createPaymentPayload } from './utils';
-import { processBillPayment, useStockItems } from '../../billing.resource';
+import { processBillPayment, patientPaymentStatusCacheKey } from '../../billing.resource';
 import { InvoiceBreakDown } from './invoice-breakdown/invoice-breakdown.component';
-import PaymentHistory from './payment-history/payment-history.component';
 import PaymentForm from './payment-form/payment-form.component';
+import PaymentHistory from './payment-history/payment-history.component';
 import { updateBillVisitAttribute } from './payment.resource';
+import { BillStatus, RefundStatus } from '../../types';
 import styles from './payments.scss';
-import { useBillableServices } from '../../billable-services/billable-service.resource';
 
 type PaymentProps = {
   bill: MappedBill;
-  selectedLineItems: Array<LineItem>;
   mutate: () => void;
 };
 
-export type Payment = { method: string; amount: string | number; referenceCode?: number | string };
+export type Payment = { method: string; amount: number | undefined; referenceCode?: number | string };
 
 export type PaymentFormValue = {
-  payment: Array<Payment>;
+  payment: Payment;
 };
 
-const Payments: React.FC<PaymentProps> = ({ bill, mutate, selectedLineItems }) => {
+const Payments: React.FC<PaymentProps> = ({ bill, mutate }) => {
   const { t } = useTranslation();
-  const { billableServices, isLoading, isValidating, error } = useBillableServices();
-  const { stockItems, isLoadingItem } = useStockItems();
+  const { mutate: swrMutate } = useSWRConfig();
+  const { currentVisit } = useVisit(bill?.patientUuid);
+  const { defaultCurrency } = useConfig();
+
   const paymentSchema = z.object({
     method: z.string().refine((value) => !!value, 'Payment method is required'),
     amount: z
-      .number()
-      .lte(bill?.totalAmount - bill?.tenderedAmount, { message: 'Amount paid should not be greater than amount due' }),
+      .number({
+        required_error: t('amountRequired', 'Amount is required'),
+        invalid_type_error: t('amountRequired', 'Amount is required'),
+      })
+      .positive({ message: t('amountMustBePositive', 'Amount must be greater than 0') })
+      .max((bill?.netAmount ?? 0) - (bill?.tenderedAmount ?? 0), {
+        message: t('paymentAmountCannotExceedAmountDue', 'Payment amount cannot exceed amount due'),
+      }),
     referenceCode: z.union([z.number(), z.string()]).optional(),
   });
 
-  const paymentFormSchema = z.object({ payment: z.array(paymentSchema) });
-  const { currentVisit } = useVisit(bill?.patientUuid);
-  const { defaultCurrency } = useConfig();
+  const paymentFormSchema = z.object({ payment: paymentSchema });
+
+  const defaultPaymentValues: PaymentFormValue = {
+    payment: { method: '', amount: undefined, referenceCode: '' },
+  };
+
   const methods = useForm<PaymentFormValue>({
     mode: 'all',
-    defaultValues: { payment: [] },
+    defaultValues: defaultPaymentValues,
     resolver: zodResolver(paymentFormSchema),
   });
 
   const formValues = useWatch({
     name: 'payment',
     control: methods.control,
+    defaultValue: defaultPaymentValues.payment,
   });
-
-  const selectedLineItemsTotal = selectedLineItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  const totalAmountTendered = formValues?.reduce((curr: number, prev) => curr + Number(prev.amount), 0) ?? 0;
-  const amountDue = bill ? bill.totalAmount - selectedLineItemsTotal : 0;
-  const clientBalance = bill ? bill.totalAmount - (bill.tenderedAmount + totalAmountTendered) : 0;
 
   const handleNavigateToBillingDashboard = () =>
     navigate({
       to: window.getOpenmrsSpaBase() + 'home/billing',
     });
 
-  const handleProcessPayment = () => {
-    if (bill) {
-      const paymentPayload = createPaymentPayload(
-        bill,
-        bill?.patientUuid,
-        formValues,
-        amountDue,
-        billableServices,
-        selectedLineItems,
-        stockItems,
-      );
-      paymentPayload.payments.forEach((payment) => {
-        payment.dateCreated = new Date(payment.dateCreated);
-      });
-
-      processBillPayment(paymentPayload, bill.uuid).then(
-        (res) => {
-          showSnackbar({
-            title: t('billPayment', 'Bill payment'),
-            subtitle: 'Bill payment processing has been successful',
-            kind: 'success',
-            timeoutInMs: 3000,
-          });
-          if (currentVisit) {
-            updateBillVisitAttribute(currentVisit);
-          }
-          methods.reset({ payment: [{ method: '', amount: '0', referenceCode: '' }] });
-          mutate();
-        },
-        (error) => {
-          showSnackbar({ title: 'Bill payment error', kind: 'error', subtitle: error?.message });
-        },
-      );
-    }
-  };
-
   if (!bill) {
     return null;
   }
 
-  const amountDueLabel = selectedLineItems.length ? t('amountDue', 'Amount Due') : t('clientBalance', 'Client Balance');
-  const amountDueValue = selectedLineItems.length ? amountDue : clientBalance;
+  const refundTotal = (bill.refunds ?? [])
+    .filter((r) => r.status === RefundStatus.COMPLETED)
+    .reduce((sum, r) => sum + r.refundAmount, 0);
+
+  const amountDue = (bill.netAmount ?? 0) - (bill.tenderedAmount ?? 0);
+
+  const handleProcessPayment = async () => {
+    if (!formValues?.method || formValues.amount == null) {
+      return;
+    }
+
+    try {
+      await processBillPayment(
+        {
+          instanceType: formValues.method,
+          amountTendered: Number(formValues.amount),
+          amount: bill.totalAmount ?? 0,
+        },
+        bill.uuid,
+      );
+      showSnackbar({
+        title: t('billPayment', 'Bill payment'),
+        subtitle: t('paymentProcessedSuccessfully', 'Payment processed successfully'),
+        kind: 'success',
+      });
+      if (currentVisit) {
+        updateBillVisitAttribute(currentVisit);
+      }
+      methods.reset(defaultPaymentValues);
+      mutate();
+      swrMutate(patientPaymentStatusCacheKey(bill.patientUuid));
+    } catch (error) {
+      showSnackbar({
+        title: t('errorProcessingPayment', 'Error processing payment'),
+        kind: 'error',
+        subtitle: error?.message,
+      });
+    }
+  };
 
   return (
     <FormProvider {...methods}>
@@ -115,36 +122,40 @@ const Payments: React.FC<PaymentProps> = ({ bill, mutate, selectedLineItems }) =
             <span></span>
           </CardHeader>
           <div>
-            {bill && <PaymentHistory bill={bill} />}
-            <PaymentForm
-              disablePayment={clientBalance <= 0}
-              clientBalance={clientBalance}
-              isSingleLineItemSelected={selectedLineItems.length > 0}
-              isSingleLineItem={bill.lineItems.length === 1}
-            />
+            <PaymentHistory bill={bill} />
+            <PaymentForm disablePayment={amountDue <= 0 || bill.status === BillStatus.PENDING} />
           </div>
         </div>
         <div className={styles.divider} />
         <div className={styles.paymentTotals}>
           <InvoiceBreakDown
-            label={t('totalAmount', 'Total Amount')}
-            value={convertToCurrency(bill.totalAmount, defaultCurrency)}
+            label={t('totalAmount', 'Total amount')}
+            value={convertToCurrency(bill.totalAmount ?? 0, defaultCurrency)}
           />
           <InvoiceBreakDown
-            label={t('totalTendered', 'Total Tendered')}
-            value={convertToCurrency(bill?.tenderedAmount + totalAmountTendered, defaultCurrency)}
+            label={t('totalTendered', 'Total tendered')}
+            value={convertToCurrency(bill.tenderedAmount ?? 0, defaultCurrency)}
           />
-          <InvoiceBreakDown label={t('discount', 'Discount')} value={'--'} />
           <InvoiceBreakDown
-            hasBalance={amountDueValue < 0}
-            label={amountDueLabel}
-            value={convertToCurrency(amountDueValue < 0 ? -amountDueValue : amountDueValue, defaultCurrency)}
+            label={t('discount', 'Discount')}
+            value={`- ${convertToCurrency((bill.totalAmount ?? 0) - (bill.netAmount ?? 0), defaultCurrency)}`}
+          />
+          <InvoiceBreakDown
+            label={t('refunds', 'Refunds')}
+            value={`- ${convertToCurrency(refundTotal, defaultCurrency)}`}
+          />
+          <InvoiceBreakDown
+            hasBalance={amountDue < 0}
+            label={t('amountDue', 'Amount due')}
+            value={convertToCurrency(amountDue, defaultCurrency)}
           />
           <div className={styles.processPayments}>
             <Button onClick={handleNavigateToBillingDashboard} kind="secondary">
               {t('discard', 'Discard')}
             </Button>
-            <Button onClick={() => handleProcessPayment()} disabled={!formValues?.length || !methods.formState.isValid}>
+            <Button
+              onClick={handleProcessPayment}
+              disabled={!formValues?.method || formValues.amount == null || !methods.formState.isValid}>
               {t('processPayment', 'Process Payment')}
             </Button>
           </div>

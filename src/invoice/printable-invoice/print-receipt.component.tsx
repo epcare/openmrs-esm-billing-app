@@ -36,7 +36,7 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ billUuid }) => {
       renderIcon={(props) => <Printer size={24} {...props} />}
       onClick={handlePrintReceiptClick}
       disabled={isRedirecting}>
-      {isRedirecting ? getCoreTranslation('loading') : t('printReceipt', 'Print receipt')}
+      {isRedirecting ? getCoreTranslation('loading', 'Loading') : t('printReceipt', 'Print receipt')}
     </Button>
   );
 };

@@ -1,8 +1,7 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import { Controller, useFieldArray, useFormContext } from 'react-hook-form';
+import React from 'react';
+import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { TrashCan, Add } from '@carbon/react/icons';
-import { Button, Dropdown, NumberInputSkeleton, TextInput, NumberInput } from '@carbon/react';
+import { Dropdown, NumberInput, NumberInputSkeleton, TextInput } from '@carbon/react';
 import { ErrorState } from '@openmrs/esm-framework';
 import { type PaymentFormValue } from '../payments.component';
 import { usePaymentModes } from '../payment.resource';
@@ -10,123 +9,90 @@ import styles from './payment-form.scss';
 
 type PaymentFormProps = {
   disablePayment: boolean;
-  clientBalance: number;
-  isSingleLineItemSelected: boolean;
-  isSingleLineItem: boolean;
 };
 
-const DEFAULT_PAYMENT = { method: '', amount: 0, referenceCode: '' };
-
-const PaymentForm: React.FC<PaymentFormProps> = ({
-  disablePayment,
-  clientBalance,
-  isSingleLineItemSelected,
-  isSingleLineItem,
-}) => {
+const PaymentForm: React.FC<PaymentFormProps> = ({ disablePayment }) => {
   const { t } = useTranslation();
   const {
     control,
     formState: { errors },
   } = useFormContext<PaymentFormValue>();
-  const { paymentModesWithoutWaiver, isLoading, error } = usePaymentModes();
-  const { fields, remove, append } = useFieldArray({ name: 'payment', control: control });
-  const [isFormVisible, setIsFormVisible] = useState(isSingleLineItem);
-
-  useEffect(() => {
-    if (isSingleLineItem) {
-      setIsFormVisible(true);
-      if (fields.length === 0) {
-        append(DEFAULT_PAYMENT);
-      }
-    }
-  }, [isSingleLineItem, append, fields.length]);
-
-  const handleAppendPaymentMode = useCallback(() => {
-    setIsFormVisible(true);
-    append(DEFAULT_PAYMENT);
-  }, [append]);
-  const handleRemovePaymentMode = useCallback((index) => remove(index), [remove]);
+  const { paymentModes, isLoading, error } = usePaymentModes();
 
   if (isLoading) {
-    return <NumberInputSkeleton data-testid="number-input-skeleton" />;
+    return <NumberInputSkeleton />;
   }
 
   if (error) {
     return (
       <div className={styles.errorPaymentContainer}>
-        <ErrorState headerTitle={t('errorLoadingPaymentModes', 'Payment modes error')} error={error} />
+        <ErrorState headerTitle={t('errorLoadingPaymentModes', 'Error loading payment modes')} error={error} />
       </div>
     );
   }
 
+  if (disablePayment) {
+    return null;
+  }
+
   return (
     <div className={styles.container}>
-      {isFormVisible &&
-        fields.map((field, index) => (
-          <div key={field.id} className={styles.paymentMethodContainer}>
-            <Controller
-              control={control}
-              name={`payment.${index}.method`}
-              render={({ field }) => (
-                <Dropdown
-                  id="paymentMethod"
-                  onChange={({ selectedItem }) => field.onChange(selectedItem?.uuid)}
-                  titleText={t('paymentMethod', 'Payment method')}
-                  label={t('selectPaymentMethod', 'Select payment method')}
-                  items={paymentModesWithoutWaiver}
-                  itemToString={(item) => (item ? item.name : '')}
-                  invalid={!!errors?.payment?.[index]?.method}
-                  invalidText={errors?.payment?.[index]?.method?.message}
-                />
-              )}
+      <div className={styles.paymentMethodContainer}>
+        <Controller
+          control={control}
+          name="payment.method"
+          render={({ field }) => (
+            <Dropdown
+              id="paymentMethod"
+              selectedItem={paymentModes?.find((m) => m.uuid === field.value) ?? null}
+              onChange={({ selectedItem }) => field.onChange(selectedItem?.uuid ?? '')}
+              titleText={t('paymentMethod', 'Payment method')}
+              label={t('selectPaymentMethod', 'Select payment method')}
+              items={paymentModes}
+              itemToString={(item) => (item ? item.name : '')}
+              invalid={!!errors?.payment?.method}
+              invalidText={errors?.payment?.method?.message}
             />
-            <Controller
-              control={control}
-              name={`payment.${index}.amount`}
-              render={({ field }) => (
-                <NumberInput
-                  id="paymentAmount"
-                  {...field}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
-                  invalid={!!errors?.payment?.[index]?.amount}
-                  invalidText={errors?.payment?.[index]?.amount?.message}
-                  label={t('amount', 'Amount')}
-                  placeholder={t('enterAmount', 'Enter amount')}
-                />
-              )}
+          )}
+        />
+        <Controller
+          control={control}
+          name="payment.amount"
+          render={({ field }) => (
+            <NumberInput
+              allowEmpty
+              disableWheel
+              hideSteppers
+              id="paymentAmount"
+              invalid={!!errors?.payment?.amount}
+              invalidText={errors?.payment?.amount?.message}
+              label={t('amount', 'Amount')}
+              onChange={(_, { value }) => {
+                const numValue = value === '' || value === undefined ? undefined : Number(value);
+                field.onChange(numValue);
+              }}
+              placeholder={t('enterAmount', 'Enter amount')}
+              value={field.value ?? ''}
             />
-            <Controller
-              name={`payment.${index}.referenceCode`}
-              control={control}
-              render={({ field }) => (
-                <TextInput
-                  id="paymentReferenceCode"
-                  {...field}
-                  labelText={t('referenceNumber', 'Reference number')}
-                  placeholder={t('enterReferenceNumber', 'Enter ref. number')}
-                  type="text"
-                />
-              )}
+          )}
+        />
+        <Controller
+          name="payment.referenceCode"
+          control={control}
+          render={({ field }) => (
+            <TextInput
+              id="paymentReferenceCode"
+              labelText={t('referenceNumber', 'Reference number')}
+              name={field.name}
+              onBlur={field.onBlur}
+              onChange={field.onChange}
+              placeholder={t('enterReferenceNumber', 'Enter reference number')}
+              type="text"
+              value={field.value ?? ''}
             />
-            <div className={styles.removeButtonContainer}>
-              <TrashCan
-                onClick={() => handleRemovePaymentMode(index)}
-                className={styles.removeButton}
-                size={20}
-                data-testid="trash-can-icon"
-              />
-            </div>
-          </div>
-        ))}
-      <Button
-        disabled={disablePayment || (!isSingleLineItem && !isSingleLineItemSelected) || clientBalance <= 0}
-        size="md"
-        onClick={handleAppendPaymentMode}
-        className={styles.paymentButtons}
-        renderIcon={(props) => <Add size={24} {...props} />}
-        iconDescription="Add">
-        {t('addPaymentOptions', 'Add payment option')}
-      </Button>
+          )}
+        />
+      </div>
     </div>
   );
 };

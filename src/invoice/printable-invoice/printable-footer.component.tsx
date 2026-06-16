@@ -3,9 +3,9 @@ import { useDefaultFacility } from '../../billing.resource';
 import styles from './printable-footer.scss';
 
 const PrintableFooter = () => {
-  const { data } = useDefaultFacility();
+  const { data, isLoading } = useDefaultFacility();
 
-  if (!data) {
+  if (isLoading) {
     return <div>--</div>;
   }
 

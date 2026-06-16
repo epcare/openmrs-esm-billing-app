@@ -188,13 +188,11 @@ export interface PatientInvoice {
 
 export interface PatientDetails {
   name: string;
-  birthDate: string;
+  age: string;
   gender: string;
-  address: string;
-  age?: number;
-  city?: string;
-  county?: string;
-  subCounty?: string;
+  city: string;
+  county: string;
+  subCounty: string;
 }
 
 export interface FacilityDetail {
