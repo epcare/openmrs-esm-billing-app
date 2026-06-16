@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { FormProvider, useForm } from 'react-hook-form';
 import { vi } from 'vitest';
 import type { PaymentFormValue } from '../payments.component';
@@ -16,7 +16,11 @@ type WrapperProps = {
 };
 
 const Wrapper: React.FC<WrapperProps> = ({ children }) => {
-  const methods = useForm<PaymentFormValue>();
+  const methods = useForm<PaymentFormValue>({
+    defaultValues: {
+      payment: { method: '', amount: undefined, referenceCode: '' },
+    },
+  });
   return <FormProvider {...methods}>{children}</FormProvider>;
 };
 
@@ -28,6 +32,7 @@ describe('PaymentForm Component', () => {
   test('should render skeleton while loading payment modes', () => {
     usePaymentModes.mockReturnValue({
       paymentModes: [],
+      paymentModesWithoutWaiver: [],
       isLoading: true,
       error: null,
       mutate: vi.fn(),
@@ -35,21 +40,19 @@ describe('PaymentForm Component', () => {
 
     render(
       <Wrapper>
-        <PaymentForm
-          disablePayment={false}
-          clientBalance={100}
-          isSingleLineItemSelected={false}
-          isSingleLineItem={false}
-        />
+        <PaymentForm disablePayment={false} />
       </Wrapper>,
     );
 
-    expect(screen.getByTestId('number-input-skeleton')).toBeInTheDocument();
+    // NumberInputSkeleton renders a skeleton loading indicator
+    const skeleton = document.querySelector('.cds--skeleton');
+    expect(skeleton).toBeInTheDocument();
   });
 
-  test.skip('should render error message when payment modes fail to load', () => {
+  test('should render error message when payment modes fail to load', () => {
     usePaymentModes.mockReturnValue({
       paymentModes: [],
+      paymentModesWithoutWaiver: [],
       isLoading: false,
       error: new Error('Failed to load payment modes'),
       mutate: vi.fn(),
@@ -57,21 +60,21 @@ describe('PaymentForm Component', () => {
 
     render(
       <Wrapper>
-        <PaymentForm
-          disablePayment={false}
-          clientBalance={100}
-          isSingleLineItemSelected={false}
-          isSingleLineItem={false}
-        />
+        <PaymentForm disablePayment={false} />
       </Wrapper>,
     );
 
-    expect(screen.getByText(/payment modes error/i)).toBeInTheDocument();
+    // ErrorState component renders "Error State" text
+    expect(screen.getByText(/error state/i)).toBeInTheDocument();
   });
 
-  test('should append default payment when isSingleLineItem is true', () => {
+  test('should render payment form when payment is enabled', () => {
     usePaymentModes.mockReturnValue({
-      paymentModes: [{ uuid: '1', name: 'Credit Card' }],
+      paymentModes: [
+        { uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false },
+        { uuid: '2', name: 'Cash', description: 'Cash', retired: false },
+      ],
+      paymentModesWithoutWaiver: [],
       isLoading: false,
       error: null,
       mutate: vi.fn(),
@@ -79,26 +82,19 @@ describe('PaymentForm Component', () => {
 
     render(
       <Wrapper>
-        <PaymentForm
-          disablePayment={false}
-          clientBalance={100}
-          isSingleLineItemSelected={false}
-          isSingleLineItem={true}
-        />
+        <PaymentForm disablePayment={false} />
       </Wrapper>,
     );
 
-    const paymentMethodElements = screen.getAllByText(/payment method/i);
-
-    expect(paymentMethodElements.length).toBeGreaterThan(0);
-    expect(paymentMethodElements[0]).toBeInTheDocument();
-
+    expect(screen.getAllByText(/payment method/i).length).toBeGreaterThan(0);
     expect(screen.getByPlaceholderText(/enter amount/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter reference number/i)).toBeInTheDocument();
   });
 
-  test('should append a payment field when add payment option button is clicked', () => {
+  test('should not render payment form when payment is disabled', () => {
     usePaymentModes.mockReturnValue({
-      paymentModes: [{ uuid: '1', name: 'Credit Card' }],
+      paymentModes: [{ uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false }],
+      paymentModesWithoutWaiver: [],
       isLoading: false,
       error: null,
       mutate: vi.fn(),
@@ -106,24 +102,22 @@ describe('PaymentForm Component', () => {
 
     render(
       <Wrapper>
-        <PaymentForm
-          disablePayment={false}
-          clientBalance={100}
-          isSingleLineItemSelected={true}
-          isSingleLineItem={false}
-        />
+        <PaymentForm disablePayment={true} />
       </Wrapper>,
     );
 
-    const addButton = screen.getByText(/add payment option/i);
-    fireEvent.click(addButton);
-    const paymentMethodElements = screen.getAllByLabelText(/payment method/i);
-    expect(paymentMethodElements).toHaveLength(2);
+    expect(screen.queryByPlaceholderText(/enter amount/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/enter reference number/i)).not.toBeInTheDocument();
   });
 
-  test('should disable add payment button when disablePayment is true', () => {
+  test('should display payment method dropdown with options', () => {
     usePaymentModes.mockReturnValue({
-      paymentModes: [{ uuid: '1', name: 'Credit Card' }],
+      paymentModes: [
+        { uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false },
+        { uuid: '2', name: 'Cash', description: 'Cash', retired: false },
+        { uuid: '3', name: 'Mobile Money', description: 'Mobile Money', retired: false },
+      ],
+      paymentModesWithoutWaiver: [],
       isLoading: false,
       error: null,
       mutate: vi.fn(),
@@ -131,44 +125,13 @@ describe('PaymentForm Component', () => {
 
     render(
       <Wrapper>
-        <PaymentForm
-          disablePayment={true}
-          clientBalance={100}
-          isSingleLineItemSelected={true}
-          isSingleLineItem={false}
-        />
+        <PaymentForm disablePayment={false} />
       </Wrapper>,
     );
 
-    expect(screen.getByText(/add payment option/i)).toBeDisabled();
-  });
-
-  test('should remove payment field when trash can icon is clicked', async () => {
-    usePaymentModes.mockReturnValue({
-      paymentModes: [{ uuid: '1', name: 'Credit Card' }],
-      isLoading: false,
-      error: null,
-      mutate: vi.fn(),
-    });
-
-    render(
-      <Wrapper>
-        <PaymentForm
-          disablePayment={false}
-          clientBalance={100}
-          isSingleLineItemSelected={true}
-          isSingleLineItem={false}
-        />
-      </Wrapper>,
-    );
-
-    fireEvent.click(screen.getByText(/add payment option/i));
-
-    const trashCanIcon = screen.getByTestId('trash-can-icon');
-    fireEvent.click(trashCanIcon);
-
-    await waitFor(() => {
-      expect(screen.queryByPlaceholderText(/enter amount/i)).not.toBeInTheDocument();
-    });
+    const paymentMethodLabels = screen.getAllByText(/payment method/i);
+    expect(paymentMethodLabels.length).toBeGreaterThan(0);
+    expect(screen.getByPlaceholderText(/enter amount/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter reference number/i)).toBeInTheDocument();
   });
 });

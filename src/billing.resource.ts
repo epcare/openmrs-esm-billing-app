@@ -119,7 +119,7 @@ export const useBill = (billUuid: string) => {
 };
 
 export const processBillPayment = (payload, billUuid: string) => {
-  const url = `${apiBasePath}bill/${billUuid}`;
+  const url = `${apiBasePath}bill/${billUuid}/payment`;
 
   return openmrsFetch(url, {
     method: 'POST',

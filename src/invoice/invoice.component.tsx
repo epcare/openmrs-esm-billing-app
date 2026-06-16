@@ -17,7 +17,7 @@ import {
   usePatient,
 } from '@openmrs/esm-framework';
 import { convertToCurrency } from '../helpers';
-import { useBill, useDefaultFacility } from '../billing.resource';
+import { useBill, useFacilityName } from '../billing.resource';
 import type { BillingConfig } from '../config-schema';
 import InvoiceTable from './invoice-table.component';
 import Payments from './payments/payments.component';
@@ -35,7 +35,7 @@ interface InvoiceDetailsProps {
 
 const Invoice: React.FC = () => {
   const { t } = useTranslation();
-  const { data } = useDefaultFacility();
+  const { facility, isLoadingFacility } = useFacilityName();
   const { billUuid, patientUuid } = useParams();
   const { patient, isLoading: isLoadingPatient } = usePatient(patientUuid);
   const { bill, isLoading: isLoadingBill, error, isValidating, mutate } = useBill(billUuid);
@@ -179,7 +179,7 @@ const Invoice: React.FC = () => {
     [t('invoiceStatus', 'Invoice status')]: bill?.status,
   };
 
-  if (isLoadingPatient || isLoadingBill) {
+  if (isLoadingPatient || isLoadingBill || isLoadingFacility) {
     return (
       <div className={styles.invoiceContainer}>
         <InlineLoading
@@ -249,7 +249,7 @@ const Invoice: React.FC = () => {
           </>
         )}
         <Button
-          disabled={isPrinting || isLoadingPatient || isLoadingBill}
+          disabled={isPrinting || isLoadingPatient || isLoadingBill || isLoadingFacility}
           onClick={handlePrint}
           renderIcon={(props) => <Printer size={24} {...props} />}
           iconDescription={t('printBill', 'Print bill')}>
@@ -269,14 +269,14 @@ const Invoice: React.FC = () => {
         <InvoiceTable bill={bill} isLoadingBill={isLoadingBill} onMutate={mutate} />
         {bill && <DiscountsTable bill={bill} />}
         {bill && <RefundsTable bill={bill} onMutate={mutate} />}
-        <Payments bill={bill} mutate={mutate} selectedLineItems={bill?.lineItems ?? []} />
+        <Payments bill={bill} mutate={mutate} />
       </div>
 
-      {bill && patient && (
-        <div className={styles.printContainer}>
-          <PrintableInvoice bill={bill} patient={patient} defaultFacility={data} componentRef={componentRef} />
-        </div>
-      )}
+      <div className={styles.printContainer} ref={componentRef}>
+        {isPrinting && bill && patient && (
+          <PrintableInvoice bill={bill} patient={patient} facility={facility} isLoading={isLoadingPatient} />
+        )}
+      </div>
     </div>
   );
 };
