@@ -63,6 +63,10 @@ vi.mock('../billing.resource', () => ({
     },
     isLoading: false,
   }),
+  useFacilityName: vi.fn().mockReturnValue({
+    facility: 'MTRH',
+    isLoadingFacility: false,
+  }),
   useStockItems: vi.fn().mockReturnValue({
     stockItems: [],
     isLoadingItem: false,
