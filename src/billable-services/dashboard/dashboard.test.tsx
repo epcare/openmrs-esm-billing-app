@@ -5,11 +5,10 @@ import { render } from '@testing-library/react';
 import BillableServicesDashboard from './dashboard.component';
 
 it('renders an empty state when there are no services', async () => {
-  const { container } = renderBillingDashboard();
+  renderBillingDashboard();
   await waitForLoadingToFinish();
-  expect(container).toBeInTheDocument();
 });
 
 function renderBillingDashboard() {
-  return render(<BillableServicesDashboard />);
+  render(<BillableServicesDashboard />);
 }

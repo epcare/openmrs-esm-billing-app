@@ -77,17 +77,14 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
       .filter(Boolean)
       .join(' & ');
 
-  const rowData = results?.map((bill) => {
-    const parsedDate = parseDate(bill.dateCreatedRaw);
-    return {
-      id: bill.uuid,
-      uuid: bill.uuid,
-      billTotal: convertToCurrency(bill?.totalAmount, defaultCurrency),
-      billDate: parsedDate ? formatDate(parsedDate, { mode: 'wide' }) : '--',
-      invoiceNumber: bill.receiptNumber || '--',
-      billedItems: setBilledItems(bill),
-    };
-  });
+  const rowData = results?.map((bill) => ({
+    id: bill.uuid,
+    uuid: bill.uuid,
+    billTotal: convertToCurrency(bill?.totalAmount, defaultCurrency),
+    billDate: formatDate(parseDate(bill.dateCreated), { mode: 'wide' }),
+    invoiceNumber: bill.receiptNumber,
+    billedItems: setBilledItems(bill),
+  }));
 
   if (isLoading) {
     return (
@@ -117,7 +114,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
           <p className={styles.content}>{t('noBillsToDisplay', 'There are no bills to display.')}</p>
           <Button
             onClick={() =>
-              launchWorkspace2('billing-form-workspace', {
+              launchWorkspace2('patient-chart-billing-form-workspace', {
                 patientUuid,
                 onMutate: mutate,
               })
@@ -141,7 +138,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
         <Button
           kind="ghost"
           onClick={() =>
-            launchWorkspace2('billing-form-workspace', {
+            launchWorkspace2('patient-chart-billing-form-workspace', {
               patientUuid,
               onMutate: mutate,
             })

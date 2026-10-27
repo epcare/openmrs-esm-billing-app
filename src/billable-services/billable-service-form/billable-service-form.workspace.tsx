@@ -379,7 +379,6 @@ const BillableServiceFormWorkspace: React.FC<Workspace2DefinitionProps<BillableS
                 placeholder={t('searchConcepts', 'Search associated concept')}
                 ref={searchInputRef}
                 value={selectedConcept?.display || searchTerm}
-                size={isTablet ? 'sm' : 'lg'}
               />
             </ResponsiveWrapper>
 

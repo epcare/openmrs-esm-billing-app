@@ -1,75 +1,37 @@
 import React from 'react';
+import classNames from 'classnames';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { SideNav, SideNavItems, SideNavLink, SideNavMenu, SideNavMenuItem } from '@carbon/react';
-import { Wallet, Money, Settings, ReportData, Cube } from '@carbon/react/icons';
 import { useTranslation } from 'react-i18next';
-import { UserHasAccess, navigate } from '@openmrs/esm-framework';
-import AddBillableService from './create-edit/add-billable-service.component';
-import BillWaiver from './bill-waiver/bill-waiver.component';
+import { useLeftNav, useLayoutType, isDesktop } from '@openmrs/esm-framework';
 import BillableServicesDashboard from './dashboard/dashboard.component';
 import BillingHeader from '../billing-header/billing-header.component';
 import CashPointConfiguration from './cash-point/cash-point-configuration.component';
-import PaymentModesConfig from './payyment-modes/payment-modes-config.component';
+import PaymentModesConfig from './payment-modes/payment-modes-config.component';
+import DiscountRequests from '../discounts/admin/discount-requests.component';
+import RefundRequests from '../refunds/admin/refund-requests.component';
 import styles from './billable-services.scss';
-import BillingReports from './bill-report/billing-reports.component';
-import BillableCommodities from '../billable-commodities/billable-commodities.component';
 
 const BillableServiceHome: React.FC = () => {
   const { t } = useTranslation();
+  const layout = useLayoutType();
   const basePath = `${window.spaBase}/billable-services`;
 
-  const handleNavigation = (path: string) => {
-    navigate({ to: `${basePath}/${path}` });
-  };
-
-  const handleCloseAddService = () => {
-    navigate({ to: `${basePath}` });
-  };
+  useLeftNav({ name: 'billable-services-left-panel-slot', basePath });
 
   return (
-    <BrowserRouter basename={`${window.spaBase}/billable-services`}>
-      <main className={styles.mainSection}>
-        <section>
-          <SideNav>
-            <SideNavItems>
-              <SideNavLink onClick={() => handleNavigation('')} renderIcon={Wallet} isActive>
-                {t('billableServices', 'Billable Services')}
-              </SideNavLink>
-              <SideNavLink onClick={() => handleNavigation('billable-commodities')} renderIcon={Cube}>
-                {t('billableCommodities', 'Billable Commodities')}
-              </SideNavLink>
-              <UserHasAccess privilege="coreapps.systemAdministration">
-                <SideNavLink onClick={() => handleNavigation('waive-bill')} renderIcon={Money}>
-                  {t('billWaiver', 'Bill waiver')}
-                </SideNavLink>
-                <SideNavMenu title={t('billingSettings', 'Billing Settings')} renderIcon={Settings}>
-                  <SideNavMenuItem onClick={() => handleNavigation('cash-point-config')}>
-                    {t('cashPointConfig', 'Cash Point Config')}
-                  </SideNavMenuItem>
-                  <SideNavMenuItem onClick={() => handleNavigation('payment-modes-config')}>
-                    {t('paymentModesConfig', 'Payment Modes Config')}
-                  </SideNavMenuItem>
-                </SideNavMenu>
-              </UserHasAccess>
-              <SideNavLink onClick={() => handleNavigation('bill-report')} renderIcon={ReportData}>
-                {t('billReports', 'Billing Reports')}
-              </SideNavLink>
-            </SideNavItems>
-          </SideNav>
-        </section>
-        <section>
-          <BillingHeader title={t('billServicesManagement', 'Bill services management')} />
+    <BrowserRouter basename={basePath}>
+      <div className={styles.pageWrapper}>
+        <main className={classNames(styles.pageContent, { [styles.hasLeftNav]: isDesktop(layout) })}>
+          <BillingHeader title={t('billingAdministration', 'Billing administration')} />
           <Routes>
             <Route path="/" element={<BillableServicesDashboard />} />
-            <Route path="/add-service" element={<AddBillableService onClose={handleCloseAddService} />} />
-            <Route path="/billable-commodities" element={<BillableCommodities />} />
-            <Route path="/waive-bill" element={<BillWaiver />} />
             <Route path="/cash-point-config" element={<CashPointConfiguration />} />
             <Route path="/payment-modes-config" element={<PaymentModesConfig />} />
-            <Route path="/bill-report" element={<BillingReports />} />
+            <Route path="/discount-requests" element={<DiscountRequests />} />
+            <Route path="/refund-requests" element={<RefundRequests />} />
           </Routes>
-        </section>
-      </main>
+        </main>
+      </div>
     </BrowserRouter>
   );
 };

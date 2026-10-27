@@ -1,6 +1,6 @@
+@use '@carbon/colors';
 @use '@carbon/layout';
 @use '@carbon/type';
-@use '@carbon/colors';
 
 .sectionContainer {
   margin: 0 layout.$spacing-03;
@@ -11,12 +11,54 @@
   color: colors.$gray-70;
   margin: 0 0 layout.$spacing-03 0;
 }
+
 .visitAttributesContainer {
   row-gap: layout.$spacing-03;
   display: flex;
   flex-direction: column;
 }
 
-.sectionField {
-  margin-top: layout.$spacing-03;
+.radioButtonGroup {
+  overflow: visible;
+
+  :global(.cds--radio-button-group) {
+    overflow: visible;
+
+    :global(.cds--radio-button-wrapper) {
+      margin-bottom: layout.$spacing-03;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  :global(fieldset.cds--fieldset) {
+    overflow: visible;
+  }
+}
+
+.stack {
+  margin-bottom: layout.$spacing-05;
+  overflow: visible;
+}
+
+.paymentDetailsLegend {
+  display: flex;
+  align-items: center;
+  gap: layout.$spacing-03;
+  overflow: visible;
+
+  :global(.cds--toggletip) {
+    overflow: visible;
+  }
+
+  :global(.cds--popover-content) {
+    z-index: 9100;
+  }
+
+  :global(.cds--toggletip-content) {
+    min-width: 16rem;
+    white-space: normal;
+  }
 }

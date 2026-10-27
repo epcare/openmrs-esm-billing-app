@@ -49,10 +49,6 @@
 
 .invalidInput {
   border: 2px solid red;
-
-  :global(.cds--text-input:focus) {
-    outline-color: transparent;
-  }
 }
 
 .removeButton {
@@ -74,6 +70,11 @@
 
 :global(.omrs-breakpoint-gt-tablet) .form {
   background-color: $ui-02;
+}
+
+.formContent {
+  display: flex;
+  flex-direction: column;
 }
 
 .grid {
@@ -149,27 +150,27 @@
 
 .selectedItemsContainer {
   margin-top: layout.$spacing-05;
-
+  
   .itemCard {
     border: 1px solid $ui-03;
     border-radius: layout.$spacing-02;
     padding: layout.$spacing-05;
     margin-bottom: layout.$spacing-05;
     background-color: $ui-01;
-
+    
     .itemHeader {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: layout.$spacing-05;
-
+      
       .itemName {
         font-weight: 600;
         font-size: 1rem;
         color: $text-02;
       }
     }
-
+    
       .itemControls {
       display: flex;
       flex-wrap: wrap;
@@ -179,24 +180,24 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
-
+        
         &:first-child {
           flex: 1 1 auto;
           min-width: 250px;
         }
-
+        
         &:nth-child(2) {
           flex: 0 0 140px;
           width: 140px;
         }
-
+        
         &:last-child {
           flex: 0 0 180px;
           width: 180px;
           margin-left: auto;
           text-align: right;
         }
-
+        
         label {
           font-size: 0.875rem;
           font-weight: 500;
@@ -206,7 +207,7 @@
           overflow: hidden;
           text-overflow: ellipsis;
         }
-
+        
         :global(.cds--list-box),
         :global(.cds--number),
         :global(.cds--combo-box),
@@ -216,7 +217,7 @@
           max-width: 100% !important;
           min-width: 0 !important;
         }
-
+        
         .priceDisplay,
         .totalDisplay {
           font-size: 0.875rem;
@@ -229,7 +230,7 @@
       }
     }
   }
-
+  
   .grandTotal {
     text-align: right;
     padding: layout.$spacing-05;
@@ -261,11 +262,11 @@
   .selectedItemsContainer {
     .itemCard {
       padding: layout.$spacing-04;
-
+      
       .itemControls {
         flex-direction: column;
         gap: layout.$spacing-03;
-
+        
         .controlSection {
           &:first-child,
           &:nth-child(2),

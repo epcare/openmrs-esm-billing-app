@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { RefundStatus, type BillRefund, type LineItem, type PatientInvoice, type Payment } from '../../../types';
 
-export function useReviewRefundModel(bill: PatientInvoice | any) {
+export function useReviewRefundModel(bill: PatientInvoice) {
   const activeRefunds: BillRefund[] = useMemo(
     () => (bill.refunds ?? []).filter((r: BillRefund) => !r.voided),
     [bill.refunds],

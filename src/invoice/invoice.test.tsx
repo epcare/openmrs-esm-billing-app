@@ -45,7 +45,7 @@ vi.mock('./printable-invoice/print-receipt.component', () => ({
 }));
 
 vi.mock('./printable-invoice/printable-invoice.component', () => ({
-  default: () => <div data-testid="mock-printable-invoice">Printable Invoice Mock</div>,
+  default: vi.fn(() => <div data-testid="mock-printable-invoice">Printable Invoice Mock</div>),
 }));
 
 vi.mock('./payments/payment.resource', () => ({
@@ -59,20 +59,7 @@ vi.mock('../billing.resource', () => ({
     data: {
       uuid: '54065383-b4d4-42d2-af4d-d250a1fd2590',
       display: 'MTRH',
-      links: [],
     },
-    isLoading: false,
-  }),
-  useFacilityName: vi.fn().mockReturnValue({
-    facility: 'MTRH',
-    isLoadingFacility: false,
-  }),
-  useStockItems: vi.fn().mockReturnValue({
-    stockItems: [],
-    isLoadingItem: false,
-    isValidating: false,
-    error: null,
-    mutate: vi.fn(),
   }),
 }));
 
@@ -88,12 +75,6 @@ vi.mock('react-router-dom', () => ({
   useParams: vi.fn().mockReturnValue({
     patientUuid: 'patientUuid',
     billUuid: 'billUuid',
-  }),
-}));
-
-vi.mock('react-i18next', () => ({
-  useTranslation: vi.fn().mockReturnValue({
-    t: vi.fn((key, defaultValue) => defaultValue ?? key),
   }),
 }));
 
@@ -466,29 +447,12 @@ describe('Invoice', () => {
     expect(screen.queryByTestId('mock-printable-invoice')).not.toBeInTheDocument();
   });
 
-  it.skip('should render PrintableInvoice when both bill and patient exist', async () => {
-    mockUsePatient.mockReturnValue({
-      patient: mockPatient as any,
-      isLoading: false,
-      error: null,
-      patientUuid: 'patientUuid',
-    });
-    mockUseBill.mockReturnValue({
-      bill: defaultBillData,
-      isLoading: false,
-      error: null,
-      isValidating: false,
-      mutate: vi.fn(),
-    });
-
+  it('should render PrintableInvoice when both bill and patient exist', async () => {
     render(<Invoice />);
     await waitForLoadingToFinish();
 
     // PrintableInvoice should be rendered with both bill and patient
-    // Check that the printContainer exists (it wraps the PrintableInvoice component)
-    const printContainer =
-      document.querySelector('.printContainer') || document.querySelector('[class*="printContainer"]');
-    expect(printContainer).toBeInTheDocument();
+    expect(screen.getByTestId('mock-printable-invoice')).toBeInTheDocument();
   });
 
   it('should pass correct props to InvoiceTable', async () => {
@@ -595,7 +559,9 @@ describe('Invoice', () => {
     render(<Invoice />);
     await waitForLoadingToFinish();
 
-    expect(screen.getByRole('button', { name: /finalize bill/i })).toBeInTheDocument();
+    // A pending bill surfaces "Finalize bill" both in the action bar and in the payments
+    // empty state, so there are two matching buttons.
+    expect(screen.getAllByRole('button', { name: /finalize bill/i })).toHaveLength(2);
   });
 
   it('should not show "Finalize bill" button for POSTED bills', async () => {
@@ -643,7 +609,9 @@ describe('Invoice', () => {
     render(<Invoice />);
     await waitForLoadingToFinish();
 
-    await user.click(screen.getByRole('button', { name: /finalize bill/i }));
+    // Click the action bar's "Finalize bill" button (the payments empty state renders a
+    // second one); both open the same confirmation modal.
+    await user.click(screen.getAllByRole('button', { name: /finalize bill/i })[0]);
 
     expect(mockShowModal).toHaveBeenCalledWith('finalize-bill-confirmation-modal', {
       bill: defaultBillData,

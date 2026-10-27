@@ -1,17 +1,13 @@
 {
   "$schema": "https://json.openmrs.org/routes.schema.json",
   "backendDependencies": {
-    "billing": ">=2.3.0-0",
+    "billing": ">=2.5.0-0",
     "webservices.rest": ">=2.24.0"
   },
   "pages": [
     {
       "component": "billableServicesHome",
       "route": "billable-services"
-    },
-    {
-      "component": "billableCommoditiesHome",
-      "route": "billable-commodities"
     }
   ],
   "extensions": [
@@ -60,14 +56,6 @@
       }
     },
     {
-      "name": "billable-services-app-menu-item",
-      "component": "billableServicesAppMenuItem",
-      "slot": "app-menu-item-slot",
-      "meta": {
-        "name": "Billable Services"
-      }
-    },
-    {
       "name": "billing-checkin-form",
       "slot": "extra-visit-attribute-slot",
       "component": "billingCheckInForm"
@@ -93,12 +81,6 @@
       "name": "billable-services-left-panel-link",
       "component": "billableServicesLeftPanelLink",
       "slot": "billable-services-left-panel-slot",
-      "order": 0
-    },
-    {
-      "name": "billable-commodities-left-panel-link",
-      "component": "billableCommoditiesLeftPanelLink",
-      "slot": "billable-commodities-left-panel-slot",
       "order": 0
     },
     {
@@ -134,6 +116,10 @@
       "component": "deletePaymentModeModal"
     },
     {
+      "name": "edit-bill-item-modal",
+      "component": "editBillLineItemModal"
+    },
+    {
       "name": "edit-bill-line-item-modal",
       "component": "editBillLineItemModal"
     },
@@ -165,14 +151,14 @@
       "window": "billing-form-window"
     },
     {
+      "name": "patient-chart-billing-form-workspace",
+      "component": "billingFormWorkspace",
+      "window": "patient-chart-billing-form"
+    },
+    {
       "name": "billable-service-form",
       "component": "billableServiceFormWorkspace",
       "window": "billable-service-form-window"
-    },
-    {
-      "name": "billable-commodity-form",
-      "component": "billableCommodityFormWorkspace",
-      "window": "billable-commodity-form-window"
     }
   ],
   "workspaceWindows2": [
@@ -181,12 +167,11 @@
       "group": "billingFormWorkspaceGroup"
     },
     {
-      "name": "billable-service-form-window",
-      "group": "billingFormWorkspaceGroup",
-      "width": "wider"
+      "name": "patient-chart-billing-form",
+      "group": "patient-chart"
     },
     {
-      "name": "billable-commodity-form-window",
+      "name": "billable-service-form-window",
       "group": "billingFormWorkspaceGroup",
       "width": "wider"
     }

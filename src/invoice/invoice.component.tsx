@@ -17,7 +17,7 @@ import {
   usePatient,
 } from '@openmrs/esm-framework';
 import { convertToCurrency } from '../helpers';
-import { useBill, useFacilityName } from '../billing.resource';
+import { useBill, useDefaultFacility } from '../billing.resource';
 import type { BillingConfig } from '../config-schema';
 import InvoiceTable from './invoice-table.component';
 import Payments from './payments/payments.component';
@@ -33,9 +33,29 @@ interface InvoiceDetailsProps {
   value: string | number;
 }
 
+/** Styles injected into the print iframe that react-to-print builds. */
+const printPageStyle = `
+  @page {
+    /* Remove the browser's default header (title) and footer (url) */
+    margin: 0;
+  }
+
+  @media print {
+    html,
+    body {
+      display: block !important;
+      background-color: #ffffff !important;
+      /* Tell browsers to print background colors */
+      color-adjust: exact;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+`;
+
 const Invoice: React.FC = () => {
   const { t } = useTranslation();
-  const { facility, isLoadingFacility } = useFacilityName();
+  const { data } = useDefaultFacility();
   const { billUuid, patientUuid } = useParams();
   const { patient, isLoading: isLoadingPatient } = usePatient(patientUuid);
   const { bill, isLoading: isLoadingBill, error, isValidating, mutate } = useBill(billUuid);
@@ -135,6 +155,7 @@ const Invoice: React.FC = () => {
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
     documentTitle: `Invoice ${bill?.receiptNumber} - ${patient?.name?.[0]?.given?.join(' ')} ${patient?.name?.[0].family}`,
+    pageStyle: printPageStyle,
     onBeforePrint: handleOnBeforeGetContent,
     onAfterPrint: handleAfterPrint,
     preserveAfterPrint: false,
@@ -161,7 +182,9 @@ const Invoice: React.FC = () => {
    * t('invoiceStatus', 'Invoice status')
    */
   const invoiceDetails: Record<string, string | number | undefined> = {
-    [t('dateBillCreated', 'Date bill created')]: bill?.dateCreated ? bill.dateCreated : '--',
+    [t('dateBillCreated', 'Date bill created')]: bill?.dateCreated
+      ? formatDate(parseDate(bill.dateCreated), { mode: 'wide' })
+      : '--',
     [t('totalAmount', 'Total amount')]: convertToCurrency(bill?.totalAmount, defaultCurrency),
     ...(hasApprovedDiscount
       ? {
@@ -179,7 +202,7 @@ const Invoice: React.FC = () => {
     [t('invoiceStatus', 'Invoice status')]: bill?.status,
   };
 
-  if (isLoadingPatient || isLoadingBill || isLoadingFacility) {
+  if (isLoadingPatient || isLoadingBill) {
     return (
       <div className={styles.invoiceContainer}>
         <InlineLoading
@@ -249,7 +272,7 @@ const Invoice: React.FC = () => {
           </>
         )}
         <Button
-          disabled={isPrinting || isLoadingPatient || isLoadingBill || isLoadingFacility}
+          disabled={isPrinting || isLoadingPatient || isLoadingBill}
           onClick={handlePrint}
           renderIcon={(props) => <Printer size={24} {...props} />}
           iconDescription={t('printBill', 'Print bill')}>
@@ -269,14 +292,14 @@ const Invoice: React.FC = () => {
         <InvoiceTable bill={bill} isLoadingBill={isLoadingBill} onMutate={mutate} />
         {bill && <DiscountsTable bill={bill} />}
         {bill && <RefundsTable bill={bill} onMutate={mutate} />}
-        <Payments bill={bill} mutate={mutate} />
+        <Payments bill={bill} mutate={mutate} onFinalizeBill={handleFinalizeBill} />
       </div>
 
-      <div className={styles.printContainer} ref={componentRef}>
-        {isPrinting && bill && patient && (
-          <PrintableInvoice bill={bill} patient={patient} facility={facility} isLoading={isLoadingPatient} />
-        )}
-      </div>
+      {bill && patient && (
+        <div className={styles.printContainer}>
+          <PrintableInvoice bill={bill} patient={patient} defaultFacility={data} componentRef={componentRef} />
+        </div>
+      )}
     </div>
   );
 };

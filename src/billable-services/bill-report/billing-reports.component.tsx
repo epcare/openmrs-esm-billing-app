@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DateFilterInput } from './date-filter/date-filter-section';
 import { EmptyStateComponent } from './empty-state/empty-state.component';
-import { useGetills } from '../../billing.resource';
+import { useBills } from '../../billing.resource';
 import DataList from './data-table/data-table.component';
 import styles from './bill-report.scss';
 import { formatDate, parseDate } from '@openmrs/esm-framework';
@@ -16,7 +16,7 @@ const BillingReports = () => {
   const [dateArray, setDateArray] = useState([startOfMonth, endOfMonth]);
   const [data, setData] = useState([]);
   const [hasUpdatedBillData, setHasUpdatedBillData] = useState(true);
-  const { billItems } = useGetills();
+  const { bills: billItems } = useBills();
 
   const headerData = [
     {
@@ -66,8 +66,8 @@ const BillingReports = () => {
     filteredArray?.forEach((item) => {
       dataArray.push({
         date: formatDate(parseDate(item.dateCreated), { mode: 'standard', noToday: true, time: false }),
-        name: item?.patient?.display.split('-')?.[1],
-        identifier: item?.patient?.display.split('-')?.[0],
+        name: item.patientName,
+        identifier: item.identifier,
         billedItems: item?.lineItems
           ?.map((bill) =>
             bill?.item && bill?.quantity > 0 ? `${bill.item}(${bill.quantity})` : bill?.billableService || null,

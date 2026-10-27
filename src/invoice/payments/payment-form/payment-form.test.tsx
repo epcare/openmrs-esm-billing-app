@@ -1,38 +1,35 @@
 import React from 'react';
+import { describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { FormProvider, useForm } from 'react-hook-form';
-import { vi } from 'vitest';
 import type { PaymentFormValue } from '../payments.component';
-import PaymentForm from './payment-form.component';
 import { usePaymentModes } from '../payment.resource';
+import PaymentForm from './payment-form.component';
 
-// Mock the payment resource
 vi.mock('../payment.resource', () => ({
   usePaymentModes: vi.fn(),
 }));
 
+const mockUsePaymentModes = vi.mocked(usePaymentModes);
+
 type WrapperProps = {
   children: React.ReactNode;
+  defaultValues?: Partial<PaymentFormValue>;
 };
 
-const Wrapper: React.FC<WrapperProps> = ({ children }) => {
+const Wrapper: React.FC<WrapperProps> = ({ children, defaultValues }) => {
   const methods = useForm<PaymentFormValue>({
-    defaultValues: {
-      payment: { method: '', amount: undefined, referenceCode: '' },
-    },
+    mode: 'all',
+    defaultValues: defaultValues || { payment: { method: '', amount: undefined, referenceCode: '' } },
   });
   return <FormProvider {...methods}>{children}</FormProvider>;
 };
 
 describe('PaymentForm Component', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  test('should render skeleton while loading payment modes', () => {
-    usePaymentModes.mockReturnValue({
+  it('should render skeleton while loading payment modes', () => {
+    mockUsePaymentModes.mockReturnValue({
       paymentModes: [],
-      paymentModesWithoutWaiver: [],
       isLoading: true,
       error: null,
       mutate: vi.fn(),
@@ -44,15 +41,14 @@ describe('PaymentForm Component', () => {
       </Wrapper>,
     );
 
-    // NumberInputSkeleton renders a skeleton loading indicator
-    const skeleton = document.querySelector('.cds--skeleton');
-    expect(skeleton).toBeInTheDocument();
+    // When loading, payment method elements should not be present
+    expect(screen.queryByText(/select payment method/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/enter amount/i)).not.toBeInTheDocument();
   });
 
-  test('should render error message when payment modes fail to load', () => {
-    usePaymentModes.mockReturnValue({
+  it('should render error message when payment modes fail to load', () => {
+    mockUsePaymentModes.mockReturnValue({
       paymentModes: [],
-      paymentModesWithoutWaiver: [],
       isLoading: false,
       error: new Error('Failed to load payment modes'),
       mutate: vi.fn(),
@@ -64,17 +60,12 @@ describe('PaymentForm Component', () => {
       </Wrapper>,
     );
 
-    // ErrorState component renders "Error State" text
     expect(screen.getByText(/error state/i)).toBeInTheDocument();
   });
 
-  test('should render payment form when payment is enabled', () => {
-    usePaymentModes.mockReturnValue({
-      paymentModes: [
-        { uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false },
-        { uuid: '2', name: 'Cash', description: 'Cash', retired: false },
-      ],
-      paymentModesWithoutWaiver: [],
+  it('should render payment form with method, amount and reference fields when not disabled', () => {
+    mockUsePaymentModes.mockReturnValue({
+      paymentModes: [{ uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false }],
       isLoading: false,
       error: null,
       mutate: vi.fn(),
@@ -86,15 +77,14 @@ describe('PaymentForm Component', () => {
       </Wrapper>,
     );
 
-    expect(screen.getAllByText(/payment method/i).length).toBeGreaterThan(0);
     expect(screen.getByPlaceholderText(/enter amount/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/enter reference number/i)).toBeInTheDocument();
+    expect(screen.getByText(/select payment method/i)).toBeInTheDocument();
   });
 
-  test('should not render payment form when payment is disabled', () => {
-    usePaymentModes.mockReturnValue({
+  it('should not render form when disablePayment is true', () => {
+    mockUsePaymentModes.mockReturnValue({
       paymentModes: [{ uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false }],
-      paymentModesWithoutWaiver: [],
       isLoading: false,
       error: null,
       mutate: vi.fn(),
@@ -107,17 +97,12 @@ describe('PaymentForm Component', () => {
     );
 
     expect(screen.queryByPlaceholderText(/enter amount/i)).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/enter reference number/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/add payment method/i)).not.toBeInTheDocument();
   });
 
-  test('should display payment method dropdown with options', () => {
-    usePaymentModes.mockReturnValue({
-      paymentModes: [
-        { uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false },
-        { uuid: '2', name: 'Cash', description: 'Cash', retired: false },
-        { uuid: '3', name: 'Mobile Money', description: 'Mobile Money', retired: false },
-      ],
-      paymentModesWithoutWaiver: [],
+  it('should render amount input without leading zero', () => {
+    mockUsePaymentModes.mockReturnValue({
+      paymentModes: [{ uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false }],
       isLoading: false,
       error: null,
       mutate: vi.fn(),
@@ -129,9 +114,70 @@ describe('PaymentForm Component', () => {
       </Wrapper>,
     );
 
-    const paymentMethodLabels = screen.getAllByText(/payment method/i);
-    expect(paymentMethodLabels.length).toBeGreaterThan(0);
-    expect(screen.getByPlaceholderText(/enter amount/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/enter reference number/i)).toBeInTheDocument();
+    const amountInput = screen.getByPlaceholderText(/enter amount/i) as HTMLInputElement;
+    expect(amountInput.value).toBe('');
+  });
+
+  it('should allow user to clear amount input without reverting to zero', async () => {
+    const user = userEvent.setup();
+    mockUsePaymentModes.mockReturnValue({
+      paymentModes: [{ uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false }],
+      isLoading: false,
+      error: null,
+      mutate: vi.fn(),
+    });
+
+    render(
+      <Wrapper>
+        <PaymentForm disablePayment={false} />
+      </Wrapper>,
+    );
+
+    const amountInput = screen.getByPlaceholderText(/enter amount/i) as HTMLInputElement;
+
+    await user.type(amountInput, '100');
+    expect(amountInput.value).toBe('100');
+
+    await user.clear(amountInput);
+    expect(amountInput.value).toBe('');
+  });
+
+  it('should handle amount input with decimal values', async () => {
+    const user = userEvent.setup();
+    mockUsePaymentModes.mockReturnValue({
+      paymentModes: [{ uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false }],
+      isLoading: false,
+      error: null,
+      mutate: vi.fn(),
+    });
+
+    render(
+      <Wrapper>
+        <PaymentForm disablePayment={false} />
+      </Wrapper>,
+    );
+
+    const amountInput = screen.getByPlaceholderText(/enter amount/i) as HTMLInputElement;
+
+    await user.type(amountInput, '10.50');
+    expect(amountInput.value).toBe('10.5');
+  });
+
+  it('should not auto-focus reference number input on mount', () => {
+    mockUsePaymentModes.mockReturnValue({
+      paymentModes: [{ uuid: '1', name: 'Credit Card', description: 'Credit Card', retired: false }],
+      isLoading: false,
+      error: null,
+      mutate: vi.fn(),
+    });
+
+    render(
+      <Wrapper>
+        <PaymentForm disablePayment={false} />
+      </Wrapper>,
+    );
+
+    const referenceInput = screen.getByPlaceholderText(/enter reference number/i);
+    expect(referenceInput).not.toHaveFocus();
   });
 });

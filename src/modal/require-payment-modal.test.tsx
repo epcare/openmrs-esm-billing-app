@@ -13,7 +13,6 @@ const mockUseBills = vi.mocked<typeof useBills>(useBills);
 
 vi.mock('../billing.resource', () => ({
   useBills: vi.fn(),
-  useStockItems: vi.fn(),
 }));
 
 vi.mock('../helpers', () => ({

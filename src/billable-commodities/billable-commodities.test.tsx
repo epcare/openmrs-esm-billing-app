@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BillableCommodities from './billable-commodities.component';
 import { useBillableCommodities } from '../billable-services/billable-service.resource';
 
@@ -46,7 +46,7 @@ vi.mock('react-i18next', () => ({
         return defaultValueOrOptions;
       }
       if (typeof defaultValueOrOptions === 'object' && defaultValueOrOptions !== null) {
-        return defaultValueOrOptions.defaultValue || key;
+        return (defaultValueOrOptions as { defaultValue?: string }).defaultValue || key;
       }
       return key;
     },

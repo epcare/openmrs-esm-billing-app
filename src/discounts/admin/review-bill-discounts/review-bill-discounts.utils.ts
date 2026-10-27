@@ -8,7 +8,7 @@ import {
   type Payment,
 } from '../../../types';
 
-export function useReviewBillModel(bill: PatientInvoice | any) {
+export function useReviewBillModel(bill: PatientInvoice) {
   const activeDiscounts: BillDiscount[] = useMemo(
     () => (bill.discounts ?? []).filter((d: BillDiscount) => !d.voided),
     [bill.discounts],

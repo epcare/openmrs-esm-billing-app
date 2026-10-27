@@ -1,18 +1,24 @@
 import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { getDefaultsFromConfigSchema, launchWorkspace2, useConfig } from '@openmrs/esm-framework';
+import { configSchema, type BillingConfig } from '../config-schema';
 import { useBills } from '../billing.resource';
 import BillHistory from './bill-history.component';
 
-// Mock i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
+const mockUseConfig = vi.mocked(useConfig<BillingConfig>);
+const mockUseBills = vi.mocked<typeof useBills>(useBills);
+
+vi.mock('../billing.resource', () => ({
+  useBills: vi.fn(() => ({
+    bills: mockBillData,
+    isLoading: false,
+    isValidating: false,
+    error: null,
+  })),
 }));
 
-// Mock window.i18next
 window.i18next = {
   language: 'en-US',
 } as any;
@@ -21,9 +27,7 @@ const testProps = {
   patientUuid: 'some-uuid',
 };
 
-const mockbills = useBills as any;
-
-const mockBillsData = [
+const mockBillData = [
   { uuid: '1', patientName: 'John Doe', identifier: '12345678', billingService: 'Checkup', totalAmount: 500 },
   { uuid: '2', patientName: 'John Doe', identifier: '12345678', billingService: 'Consulatation', totalAmount: 600 },
   { uuid: '3', patientName: 'John Doe', identifier: '12345678', billingService: 'Child services', totalAmount: 700 },
@@ -38,75 +42,17 @@ const mockBillsData = [
   { uuid: '12', patientName: 'John Doe', identifier: '12345678', billingService: 'MCH', totalAmount: 1300 },
 ];
 
-// Mock the invoice table component
-vi.mock('../invoice/invoice-table.component', () => ({
-  default: () => <div>Invoice table</div>,
-}));
-
-// Mock the billing resource
-vi.mock('../billing.resource', () => ({
-  useBills: vi.fn(() => ({
-    bills: mockBillsData,
-    isLoading: false,
-    isValidating: false,
-    error: null,
-  })),
-}));
-
-// Mock esm-framework
-vi.mock('@openmrs/esm-framework', () => ({
-  useLayoutType: vi.fn(() => 'small-desktop'),
-  isDesktop: vi.fn(() => true),
-  usePagination: vi.fn().mockImplementation((data) => ({
-    currentPage: 1,
-    goTo: vi.fn(),
-    results: data,
-    paginated: true,
-  })),
-  showToast: vi.fn(),
-  showNotification: vi.fn(),
-  createErrorHandler: vi.fn(),
-  createGlobalStore: vi.fn(),
-  getGlobalStore: vi.fn(() => ({
-    subscribe: vi.fn(),
-    getState: vi.fn(),
-    setState: vi.fn(),
-  })),
-  useConfig: vi.fn(() => ({
-    pageSize: 10,
-    defaultCurrency: 'USD',
-  })),
-  useSession: vi.fn(() => ({
-    sessionLocation: { uuid: 'some-uuid', display: 'Location' },
-  })),
-  formatDate: vi.fn((date) => date?.toString() ?? ''),
-  formatDatetime: vi.fn((date) => date?.toString() ?? ''),
-  parseDate: vi.fn((dateString) => new Date(dateString)),
-  ExtensionSlot: vi.fn(({ children }) => <>{children}</>),
-  CardHeader: vi.fn(({ children }) => <div>{children}</div>),
-  EmptyCardIllustration: vi.fn(() => <div>Empty state illustration</div>),
-  ErrorState: vi.fn(({ error }) => <div>Error: {error?.message}</div>),
-  launchPatientWorkspace: vi.fn(),
-  usePaginationInfo: vi.fn(() => ({
-    pageSizes: [10, 20, 30],
-    currentPage: 1,
-  })),
-  getCoreTranslation: vi.fn((key) => key),
-  restBaseUrl: 'http://localhost',
-}));
-
 describe('BillHistory', () => {
-  afterEach(() => {
-    vi.clearAllMocks();
+  beforeEach(() => {
+    mockUseConfig.mockReturnValue({ ...getDefaultsFromConfigSchema(configSchema), defaultCurrency: 'USD' });
   });
 
-  test('should render loading datatable skeleton', () => {
-    mockbills.mockReturnValueOnce({
+  it('should render loading datatable skeleton', () => {
+    mockUseBills.mockReturnValueOnce({
       isLoading: true,
       isValidating: false,
       error: null,
       bills: [],
-      dateFilteredBills: [],
       mutate: vi.fn(),
     });
     render(<BillHistory {...testProps} />);
@@ -115,42 +61,40 @@ describe('BillHistory', () => {
     expect(loadingSkeleton).toHaveClass('cds--skeleton cds--data-table cds--data-table--zebra');
   });
 
-  test('should render error state when API call fails', () => {
-    mockbills.mockReturnValueOnce({
+  it('should render error state when API call fails', () => {
+    mockUseBills.mockReturnValueOnce({
       isLoading: false,
       isValidating: false,
       error: new Error('some error'),
       bills: [],
-      dateFilteredBills: [],
       mutate: vi.fn(),
     });
     render(<BillHistory {...testProps} />);
-    const errorState = screen.getByText('Error: some error');
+    const errorState = screen.getByText(/Error/);
     expect(errorState).toBeInTheDocument();
   });
 
-  test.skip('should render bills table', async () => {
+  it('should render bills table', async () => {
     const user = userEvent.setup();
-    mockbills.mockReturnValueOnce({
+    mockUseBills.mockReturnValueOnce({
       isLoading: false,
       isValidating: false,
       error: null,
-      bills: mockBillsData as any,
-      dateFilteredBills: mockBillsData as any,
+      bills: mockBillData as any,
       mutate: vi.fn(),
     });
     render(<BillHistory {...testProps} />);
 
     // Verify headers
-    expect(screen.getByText('visitTime')).toBeInTheDocument();
-    expect(screen.getByText('identifier')).toBeInTheDocument();
+    expect(screen.getByText('Bill date')).toBeInTheDocument();
+    expect(screen.getByText('Invoice number')).toBeInTheDocument();
 
     const tableRowGroup = screen.getAllByRole('rowgroup');
     expect(tableRowGroup).toHaveLength(2);
 
     // Page navigation should work as expected
-    const nextPageButton = screen.getByRole('button', { name: /nextPage/ });
-    const prevPageButton = screen.getByRole('button', { name: /previousPage/ });
+    const nextPageButton = screen.getByRole('button', { name: /Next page/ });
+    const prevPageButton = screen.getByRole('button', { name: /Previous page/ });
 
     expect(nextPageButton).toBeInTheDocument();
     expect(prevPageButton).toBeInTheDocument();
@@ -165,17 +109,93 @@ describe('BillHistory', () => {
     await user.click(expandAllRowButton);
   });
 
-  test.skip('should render empty state view when there are no bills', () => {
-    mockbills.mockReturnValueOnce({
+  it('should render empty state view when there are no bills', () => {
+    mockUseBills.mockReturnValueOnce({
       isLoading: false,
       isValidating: false,
       error: null,
       bills: [],
-      dateFilteredBills: [],
       mutate: vi.fn(),
     });
     render(<BillHistory {...testProps} />);
     const emptyState = screen.getByText(/There are no bills to display./);
     expect(emptyState).toBeInTheDocument();
+  });
+
+  it('should show overflow menu with "Add items to bill" for PENDING bills', async () => {
+    const user = userEvent.setup();
+    const pendingBill = {
+      ...mockBillData[0],
+      status: 'PENDING',
+      dateCreated: '2024-01-01',
+      receiptNumber: 'REC-001',
+      lineItems: [{ uuid: 'item-1', item: 'Test', quantity: 1, price: 100, status: 'PENDING' }],
+    };
+    mockUseBills.mockReturnValueOnce({
+      isLoading: false,
+      isValidating: false,
+      error: null,
+      bills: [pendingBill] as any,
+      mutate: vi.fn(),
+    });
+    render(<BillHistory {...testProps} />);
+
+    const overflowMenu = screen.getByTestId('action-menu-1');
+    await user.click(overflowMenu);
+
+    expect(screen.getByText(/add items to bill/i)).toBeInTheDocument();
+  });
+
+  it('should not show overflow menu for PAID bills', () => {
+    const paidBill = {
+      ...mockBillData[0],
+      status: 'PAID',
+      dateCreated: '2024-01-01',
+      receiptNumber: 'REC-001',
+      lineItems: [{ uuid: 'item-1', item: 'Test', quantity: 1, price: 100, status: 'PAID' }],
+    };
+    mockUseBills.mockReturnValueOnce({
+      isLoading: false,
+      isValidating: false,
+      error: null,
+      bills: [paidBill] as any,
+      mutate: vi.fn(),
+    });
+    render(<BillHistory {...testProps} />);
+
+    expect(screen.queryByTestId('action-menu-1')).not.toBeInTheDocument();
+  });
+
+  it('should launch workspace with billUuid when "Add items to bill" is clicked', async () => {
+    const user = userEvent.setup();
+    const mockMutate = vi.fn();
+    const mockLaunchWorkspace2 = vi.mocked(launchWorkspace2);
+    const pendingBill = {
+      ...mockBillData[0],
+      status: 'PENDING',
+      dateCreated: '2024-01-01',
+      receiptNumber: 'REC-001',
+      lineItems: [{ uuid: 'item-1', item: 'Test', quantity: 1, price: 100, status: 'PENDING' }],
+    };
+    mockUseBills.mockReturnValueOnce({
+      isLoading: false,
+      isValidating: false,
+      error: null,
+      bills: [pendingBill] as any,
+      mutate: mockMutate,
+    });
+    render(<BillHistory {...testProps} />);
+
+    const overflowMenu = screen.getByTestId('action-menu-1');
+    await user.click(overflowMenu);
+
+    const addItemsMenuItem = screen.getByText(/add items to bill/i);
+    await user.click(addItemsMenuItem);
+
+    expect(mockLaunchWorkspace2).toHaveBeenCalledWith('patient-chart-billing-form-workspace', {
+      patientUuid: 'some-uuid',
+      billUuid: '1',
+      onMutate: mockMutate,
+    });
   });
 });

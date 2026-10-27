@@ -1,3 +1,4 @@
+import { getCoreTranslation } from '@openmrs/esm-framework';
 import { type Payment, type LineItem } from '../types';
 
 // amount already paid
@@ -36,7 +37,7 @@ export const convertToCurrency = (amountToConvert: number, currencyType?: string
   const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currencyType,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
   });
 
   let formattedAmount = formatter.format(Math.abs(amountToConvert));
@@ -51,13 +52,13 @@ export const convertToCurrency = (amountToConvert: number, currencyType?: string
 export const getGender = (gender: string, t) => {
   switch (gender) {
     case 'male':
-      return t('male', 'Male');
+      return getCoreTranslation('male');
     case 'female':
-      return t('female', 'Female');
+      return getCoreTranslation('female');
     case 'other':
-      return t('other', 'Other');
+      return getCoreTranslation('other');
     case 'unknown':
-      return t('unknown', 'Unknown');
+      return getCoreTranslation('unknown');
     default:
       return gender;
   }

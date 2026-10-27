@@ -9,7 +9,7 @@ import type { BillRefund, LineItem, PatientInvoice, Payment } from '../../../../
 import styles from './bill-receipt-rail.scss';
 
 interface Props {
-  bill: PatientInvoice | any;
+  bill: PatientInvoice;
   lineItems: Array<LineItem>;
   payments: Array<Payment>;
   paymentsTotal: number;

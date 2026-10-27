@@ -1,75 +1,9 @@
-import { type LineItem, type MappedBill } from '../../types';
-import { type Payment } from './payments.component';
+import type { BillableService } from '../../types';
 
-const hasLineItem = (lineItems: Array<LineItem>, item: LineItem) => {
-  if (lineItems?.length === 0) {
-    return false;
+export const getBillableServiceUuid = (billableServices: Array<BillableService>, serviceName: string) => {
+  if (!billableServices.length) {
+    return null;
   }
-  const foundItem = lineItems.find((lineItem) => lineItem.uuid === item.uuid);
-  return Boolean(foundItem);
-};
-
-export const createPaymentPayload = (
-  bill: MappedBill,
-  patientUuid: string,
-  formValues: Array<Payment>,
-  amountDue: number,
-  billableServices: Array<any>,
-  selectedLineItems: Array<LineItem>,
-  stockItems: Array<any>,
-) => {
-  const { cashier } = bill;
-  const totalAmount = bill?.totalAmount;
-  const paymentStatus = amountDue <= 0 ? 'PAID' : 'PENDING';
-  const previousPayments = bill?.payments.map((payment) => ({
-    amount: payment.amount,
-    amountTendered: payment.amountTendered,
-    attributes: [],
-    instanceType: payment.instanceType.uuid,
-    dateCreated: payment.dateCreated,
-  }));
-
-  const newPayments = formValues.map((formValue) => ({
-    amount: parseFloat(totalAmount.toFixed(2)),
-    amountTendered: parseFloat(Number(formValue.amount).toFixed(2)),
-    attributes: [],
-    instanceType: formValue.method,
-    dateCreated: new Date(),
-  }));
-
-  const updatedPayments = [...newPayments, ...previousPayments];
-  const totalAmountRendered = updatedPayments.reduce((acc, payment) => acc + payment.amountTendered, 0);
-
-  const updatedLineItems = bill?.lineItems.map((lineItem) => ({
-    ...lineItem,
-    billableService: getBillableServiceUuid(billableServices, lineItem.billableService),
-    item: getStockItemUuid(stockItems, lineItem?.item),
-    paymentStatus:
-      bill?.lineItems.length > 1
-        ? hasLineItem(selectedLineItems ?? [], lineItem) && totalAmountRendered >= lineItem.price * lineItem.quantity
-          ? 'PAID'
-          : 'PENDING'
-        : paymentStatus,
-  }));
-
-  const allItemsBillPaymentStatus =
-    updatedLineItems.filter((item) => item.paymentStatus === 'PENDING').length === 0 ? 'PAID' : 'PENDING';
-
-  const processedPayment = {
-    cashPoint: bill?.cashPointUuid,
-    cashier: cashier.uuid,
-    lineItems: updatedLineItems,
-    payments: [...updatedPayments],
-    patient: patientUuid,
-    status: selectedLineItems?.length > 0 ? allItemsBillPaymentStatus : paymentStatus,
-  };
-
-  return processedPayment;
-};
-
-export const getBillableServiceUuid = (billableServices: Array<any>, serviceName: string) => {
-  return billableServices.length ? billableServices.find((service) => service.name === serviceName)?.uuid : null;
-};
-export const getStockItemUuid = (stockItems: Array<any>, itemName: string) => {
-  return stockItems.length ? stockItems.find((item) => item?.conceptName === itemName)?.uuid : null;
+  const service = billableServices.find((service) => service.name === serviceName);
+  return service?.uuid ?? null;
 };

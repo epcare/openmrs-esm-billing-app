@@ -26,7 +26,6 @@ vi.mock('@openmrs/esm-framework', () => ({
 vi.mock('../../discounts.resource');
 vi.mock('../../../billing.resource', () => ({
   useBill: vi.fn().mockReturnValue({ bill: null, mutate: vi.fn(), isLoading: false, isValidating: false }),
-  useStockItems: vi.fn(),
 }));
 
 (window as any).i18next = { language: 'en-US' };

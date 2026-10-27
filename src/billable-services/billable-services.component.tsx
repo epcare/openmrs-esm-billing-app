@@ -21,43 +21,55 @@ import {
 } from '@carbon/react';
 import { ArrowRight } from '@carbon/react/icons';
 import {
-  useLayoutType,
-  isDesktop,
-  useConfig,
-  usePagination,
-  ErrorState,
   EmptyCard,
+  ErrorState,
+  getCoreTranslation,
+  isDesktop,
   launchWorkspace2,
+  useConfig,
+  useLayoutType,
+  usePagination,
+  type LayoutType,
 } from '@openmrs/esm-framework';
-import { type BillableService } from '../types/index';
+import { type BillableService } from '../types';
+import { type BillingConfig } from '../config-schema';
 import { useBillableServices } from './billable-service.resource';
 import styles from './billable-services.scss';
+
+interface FilterableTableHeaderProps {
+  layout: LayoutType;
+  handleSearch: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  isValidating: boolean;
+  launchBillableServiceForm: () => void;
+  responsiveSize: 'sm' | 'md' | 'lg';
+  t: (key: string, fallback: string) => string;
+}
 
 const BillableServices = () => {
   const { t } = useTranslation();
   const { billableServices, isLoading, isValidating, error, mutate } = useBillableServices();
   const layout = useLayoutType();
-  const config = useConfig();
+  const { pageSize: configuredPageSize } = useConfig<BillingConfig>();
   const [searchString, setSearchString] = useState('');
   const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
   const pageSizes = [10, 20, 30, 40, 50];
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(configuredPageSize ?? 10);
 
   const headerData = [
     {
-      header: t('serviceName', 'Service Name'),
+      header: t('serviceName', 'Service name'),
       key: 'serviceName',
     },
     {
-      header: t('shortName', 'Short Name'),
+      header: t('shortName', 'Short name'),
       key: 'shortName',
     },
     {
-      header: t('serviceType', 'Service Type'),
+      header: t('serviceType', 'Service type'),
       key: 'serviceType',
     },
     {
-      header: t('serviceStatus', 'Service Status'),
+      header: t('serviceStatus', 'Service status'),
       key: 'status',
     },
     {
@@ -76,8 +88,9 @@ const BillableServices = () => {
     const flatBillableServices = Array.isArray(billableServices) ? billableServices.flat() : billableServices;
 
     if (flatBillableServices !== undefined && flatBillableServices.length > 0) {
-      if (searchString && searchString.trim() !== '') {
-        const search = searchString.toLowerCase();
+      const trimmedSearch = searchString.trim();
+      if (trimmedSearch) {
+        const search = trimmedSearch.toLowerCase();
         return flatBillableServices.filter((service: BillableService) =>
           Object.entries(service).some(([header, value]) => {
             return header === 'uuid' ? false : `${value}`.toLowerCase().includes(search);
@@ -88,25 +101,20 @@ const BillableServices = () => {
     return flatBillableServices;
   }, [searchString, billableServices]);
 
-  const { goTo, results: paginatedList, currentPage } = usePagination(searchResults, pageSize);
+  const { paginated, goTo, results, currentPage } = usePagination<BillableService>(searchResults, pageSize);
   const rowData = [];
 
-  if (paginatedList) {
-    paginatedList.forEach((service, index) => {
+  if (results) {
+    results.forEach((service) => {
       const s = {
-        id: `${index}`,
+        id: service.uuid,
         uuid: service.uuid,
         serviceName: service.name,
         shortName: service.shortName,
         serviceType: service?.serviceType?.display,
         status: service.serviceStatus,
-        prices: '--',
+        prices: service.servicePrices.map((price) => `${price.name} (${price.price})`).join(', ') || '--',
       };
-      let cost = '';
-      service.servicePrices.forEach((price) => {
-        cost += `${price.name} (${price.price}) `;
-      });
-      s.prices = cost;
       rowData.push(s);
     });
   }
@@ -130,15 +138,23 @@ const BillableServices = () => {
   );
 
   if (isLoading) {
-    return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
+    return (
+      <InlineLoading
+        status="active"
+        iconDescription={getCoreTranslation('loading')}
+        description={t('loading', 'Loading data') + '...'}
+      />
+    );
   }
+
   if (error) {
-    return <ErrorState headerTitle={t('billableService', 'Billable Service')} error={error} />;
+    return <ErrorState headerTitle={t('billableService', 'Billable service')} error={error} />;
   }
+
   if (billableServices.length === 0) {
     return (
       <EmptyCard
-        displayText={t('billableService', 'Billable service')}
+        displayText={t('billableServices__lower', 'billable services')}
         headerTitle={t('billableService', 'Billable service')}
         launchForm={launchBillableServiceForm}
       />
@@ -146,113 +162,109 @@ const BillableServices = () => {
   }
 
   return (
-    <>
-      {billableServices?.length > 0 ? (
-        <div className={styles.serviceContainer}>
-          <FilterableTableHeader
-            handleSearch={handleSearch}
-            isValidating={isValidating}
-            layout={layout}
-            responsiveSize={responsiveSize}
-            searchString={searchString}
-            t={t}
-            launchForm={launchBillableServiceForm}
-          />
-          <DataTable
-            isSortable
-            rows={rowData}
-            headers={headerData}
-            size={responsiveSize}
-            useZebraStyles={rowData?.length > 1 ? true : false}
-            overflowMenuOnHover={isDesktop(layout)}>
-            {({ rows, headers, getRowProps, getTableProps, getHeaderProps }) => (
-              <TableContainer>
-                <Table {...getTableProps()} aria-label="service list">
-                  <TableHead>
-                    <TableRow>
-                      {headers.map((header) => (
-                        <TableHeader
-                          {...getHeaderProps({
-                            header,
-                          })}
-                          key={header.key}>
-                          {header.header}
-                        </TableHeader>
-                      ))}
-                      <TableHeader aria-label={t('actions', 'Actions')} />
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        {...getRowProps({
-                          row,
-                        })}>
-                        {row.cells.map((cell) => (
-                          <TableCell key={cell.id}>{cell.value}</TableCell>
-                        ))}
-                        <TableCell className="cds--table-column-menu">
-                          <OverflowMenu size="lg" flipped>
-                            <OverflowMenuItem
-                              className={styles.menuItem}
-                              itemText={t('editBillableService', 'Edit billable service')}
-                              onClick={() =>
-                                handleEditService(paginatedList.find((service) => service.uuid === row.id))
-                              }
-                            />
-                          </OverflowMenu>
-                        </TableCell>
-                      </TableRow>
+    <div className={styles.serviceContainer}>
+      <FilterableTableHeader
+        handleSearch={handleSearch}
+        isValidating={isValidating}
+        launchBillableServiceForm={launchBillableServiceForm}
+        layout={layout}
+        responsiveSize={responsiveSize}
+        t={t}
+      />
+      <DataTable
+        isSortable
+        rows={rowData}
+        headers={headerData}
+        overflowMenuOnHover={isDesktop(layout)}
+        size={responsiveSize}
+        useZebraStyles={rowData?.length > 1}>
+        {({ rows, headers, getHeaderProps, getRowProps, getTableProps }) => (
+          <TableContainer>
+            <Table {...getTableProps()} aria-label={t('serviceList', 'Service list')}>
+              <TableHead>
+                <TableRow>
+                  {headers.map((header) => (
+                    <TableHeader
+                      {...getHeaderProps({
+                        header,
+                      })}
+                      key={header.key}>
+                      {header.header}
+                    </TableHeader>
+                  ))}
+                  <TableHeader aria-label={getCoreTranslation('actions')} />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    {...getRowProps({
+                      row,
+                    })}>
+                    {row.cells.map((cell) => (
+                      <TableCell key={cell.id}>{cell.value}</TableCell>
                     ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </DataTable>
-          {searchResults?.length === 0 && (
-            <div className={styles.filterEmptyState}>
-              <Layer level={0}>
-                <Tile className={styles.filterEmptyStateTile}>
-                  <p className={styles.filterEmptyStateContent}>
-                    {t('noMatchingServicesToDisplay', 'No matching services to display')}
-                  </p>
-                  <p className={styles.filterEmptyStateHelper}>{t('checkFilters', 'Check the filters above')}</p>
-                </Tile>
-              </Layer>
-            </div>
-          )}
-          <Pagination
-            forwardText="Next page"
-            backwardText="Previous page"
-            page={currentPage}
-            pageSize={pageSize}
-            pageSizes={pageSizes}
-            totalItems={searchResults?.length}
-            className={styles.pagination}
-            size={responsiveSize}
-            onChange={({ pageSize: newPageSize, page: newPage }) => {
-              if (newPageSize !== pageSize) {
-                setPageSize(newPageSize);
-              }
-              if (newPage !== currentPage) {
-                goTo(newPage);
-              }
-            }}
-          />
+                    <TableCell className="cds--table-column-menu">
+                      <OverflowMenu size="lg" flipped>
+                        <OverflowMenuItem
+                          className={styles.menuItem}
+                          itemText={t('editBillableService', 'Edit billable service')}
+                          onClick={() => handleEditService(results.find((service) => service.uuid === row.id))}
+                        />
+                      </OverflowMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </DataTable>
+      {searchResults?.length === 0 && (
+        <div className={styles.filterEmptyState}>
+          <Layer level={0}>
+            <Tile className={styles.filterEmptyStateTile}>
+              <p className={styles.filterEmptyStateContent}>
+                {t('noMatchingServicesToDisplay', 'No matching services to display')}
+              </p>
+              <p className={styles.filterEmptyStateHelper}>{t('checkFilters', 'Check the filters above')}</p>
+            </Tile>
+          </Layer>
         </div>
-      ) : (
-        <EmptyCard
-          launchForm={launchBillableServiceForm}
-          displayText={t('noServicesToDisplay', 'There are no services to display')}
-          headerTitle={t('billableService', 'Billable service')}
+      )}
+      {paginated && (
+        <Pagination
+          forwardText={t('nextPage', 'Next page')}
+          backwardText={t('previousPage', 'Previous page')}
+          page={currentPage}
+          pageSize={pageSize}
+          pageSizes={pageSizes}
+          totalItems={searchResults?.length}
+          className={styles.pagination}
+          size={responsiveSize}
+          onChange={({ pageSize: newPageSize, page: newPage }) => {
+            if (newPageSize !== pageSize) {
+              setPageSize(newPageSize);
+            }
+            if (newPage !== currentPage) {
+              goTo(newPage);
+            }
+          }}
         />
       )}
-    </>
+    </div>
   );
 };
 
-function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t, searchString, launchForm }) {
+function FilterableTableHeader({
+  layout,
+  handleSearch,
+  isValidating,
+  launchBillableServiceForm,
+  responsiveSize,
+  t,
+}: FilterableTableHeaderProps) {
   return (
     <>
       <div className={styles.headerContainer}>
@@ -272,14 +284,13 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           labelText=""
           placeholder={t('filterTable', 'Filter table')}
           onChange={handleSearch}
-          value={searchString}
           size={responsiveSize}
         />
         <Button
           size={responsiveSize}
           kind="primary"
           renderIcon={(props) => <ArrowRight size={16} {...props} />}
-          onClick={launchForm}
+          onClick={launchBillableServiceForm}
           iconDescription={t('addNewBillableService', 'Add new billable service')}>
           {t('addNewService', 'Add new service')}
         </Button>
@@ -287,4 +298,5 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
     </>
   );
 }
+
 export default BillableServices;
