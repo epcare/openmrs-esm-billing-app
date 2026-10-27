@@ -12,7 +12,6 @@ const mockShowSnackbar = vi.mocked(showSnackbar);
 
 vi.mock('../billing.resource', () => ({
   deleteBill: vi.fn(),
-  useStockItems: vi.fn(),
 }));
 
 const mockBill = {

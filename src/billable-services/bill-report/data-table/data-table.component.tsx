@@ -19,7 +19,15 @@ import { isDesktop, useLayoutType, usePagination } from '@openmrs/esm-framework'
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styles from './data-tables.scss';
-import { saveAs } from 'file-saver';
+
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
 
 type FilterProps = {
   rowIds: Array<string>;
@@ -80,10 +88,10 @@ const DataList: React.FC<ListProps> = ({ columns, data, pageSize }) => {
     const formattedDate = today.toISOString().slice(0, 19).replace(/[-T:]/g, ''); // YYYYMMDDHHMMSS
     if (documentType === 'csv') {
       const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8' });
-      saveAs(blob, `billingReport_${formattedDate}.csv`);
+      saveBlob(blob, `billingReport_${formattedDate}.csv`);
     } else if (documentType === 'json') {
       const jsonBlob = new Blob([csvString], { type: 'application/json' });
-      saveAs(jsonBlob, `billingReport_${formattedDate}.json`);
+      saveBlob(jsonBlob, `billingReport_${formattedDate}.json`);
     }
   }, [list, columns, documentType]);
 
@@ -120,16 +128,10 @@ const DataList: React.FC<ListProps> = ({ columns, data, pageSize }) => {
                     <TableToolbarAction className={styles.toolbarAction} onClick={() => setDocumentType('csv')}>
                       Download as CSV
                     </TableToolbarAction>
-                    <TableToolbarAction
-                      className={styles.toolbarAction}
-                      disabled
-                      onClick={() => setDocumentType('pdf')}>
+                    <TableToolbarAction className={styles.toolbarAction} onClick={() => setDocumentType('pdf')}>
                       Download as PDF
                     </TableToolbarAction>
-                    <TableToolbarAction
-                      className={styles.toolbarAction}
-                      disabled
-                      onClick={() => setDocumentType('json')}>
+                    <TableToolbarAction className={styles.toolbarAction} onClick={() => setDocumentType('json')}>
                       Download as JSON
                     </TableToolbarAction>
                   </TableToolbarMenu>

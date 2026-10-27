@@ -1,11 +1,12 @@
-import React, { useCallback, useId, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import classNames from 'classnames';
 import {
+  Button,
   DataTable,
   DataTableSkeleton,
   Dropdown,
-  InlineLoading,
   Layer,
+  InlineLoading,
   Pagination,
   Search,
   Table,
@@ -21,96 +22,139 @@ import { useTranslation } from 'react-i18next';
 import {
   useLayoutType,
   isDesktop,
-  useConfig,
-  usePagination,
+  EmptyCardIllustration,
   ErrorState,
   ConfigurableLink,
-  EmptyCardIllustration,
+  formatDate,
+  useConfig,
+  useDebounce,
+  parseDate,
+  OpenmrsDatePicker,
+  type LayoutType,
 } from '@openmrs/esm-framework';
-import { useBills } from '../billing.resource';
+import { usePaginatedBills } from '../billing.resource';
+import { BillStatus } from '../types';
+import type { MappedBill } from '../types';
+import type { BillingConfig } from '../config-schema';
 import styles from './bills-table.scss';
 
-const BillsTable = () => {
+interface BillDisplayItem extends Omit<MappedBill, 'id'> {
+  id: string;
+  receiptNumberDisplay: React.ReactNode;
+  billedItems: string;
+}
+
+interface BillPaymentStatusFilterItem {
+  id: BillStatus | '';
+  text: string;
+  status: string;
+}
+
+const mapLineItems = (bill: MappedBill) =>
+  bill?.lineItems
+    ?.map((item) => item.billableService || item.item)
+    .filter(Boolean)
+    .join(' & ');
+
+const BillsTable: React.FC = () => {
   const { t } = useTranslation();
-  const id = useId();
-  const config = useConfig();
   const layout = useLayoutType();
+  const { pageSize: defaultPageSize } = useConfig<BillingConfig>();
+  const [pageSize, setPageSize] = useState(defaultPageSize ?? 10);
+  const pageSizes = [10, 20, 30, 40, 50];
   const responsiveSize = isDesktop(layout) ? 'sm' : 'lg';
-  const [billPaymentStatus, setBillPaymentStatus] = useState('PENDING');
-  const pageSizes = config?.bills?.pageSizes ?? [10, 20, 30, 40, 50];
-  const [pageSize, setPageSize] = useState(config?.bills?.pageSize ?? 10);
-  const { bills, isLoading, isValidating, error } = useBills('', '');
+
+  const billPaymentStatusFilterItems: BillPaymentStatusFilterItem[] = useMemo(
+    () => [
+      { id: '', text: t('allBills', 'All bills'), status: '' },
+      {
+        id: BillStatus.PENDING,
+        text: t('pendingConfirmationBills', 'Pending confirmation'),
+        status: BillStatus.PENDING,
+      },
+      { id: BillStatus.POSTED, text: t('pendingPaymentBills', 'Pending payment'), status: BillStatus.POSTED },
+      { id: BillStatus.PAID, text: t('paidBills', 'Paid bills'), status: BillStatus.PAID },
+      {
+        id: BillStatus.REFUNDED,
+        text: t('refundedBills', 'Refunded bills'),
+        status: `${BillStatus.REFUNDED},${BillStatus.PARTIALLY_REFUNDED}`,
+      },
+      {
+        id: BillStatus.REFUND_REQUESTED,
+        text: t('pendingRefundBills', 'Pending refunds'),
+        status: BillStatus.REFUND_REQUESTED,
+      },
+    ],
+    [t],
+  );
+
+  // Default to 'PENDING' (pending confirmation) so cashiers see bills awaiting confirmation on load
+  const [billPaymentStatus, setBillPaymentStatus] = useState<BillPaymentStatusFilterItem>(
+    () =>
+      billPaymentStatusFilterItems.find((item) => item.id === BillStatus.PENDING) ?? billPaymentStatusFilterItems[0],
+  );
   const [searchString, setSearchString] = useState('');
+  const debouncedSearchString = useDebounce(searchString, 500);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const { bills, error, currentPage, isLoading, isValidating, totalCount, goTo } = usePaginatedBills(
+    pageSize,
+    billPaymentStatus.status,
+    debouncedSearchString || undefined,
+    startDate,
+    endDate,
+  );
 
   const headerData = [
     {
-      header: t('visitTime', 'Visit time'),
-      key: 'visitTime',
+      header: t('billDate', 'Bill date'),
+      key: 'dateCreated',
     },
     {
-      header: t('identifier', 'Identifier'),
+      header: t('invoiceNumber', 'Invoice number'),
+      key: 'receiptNumberDisplay',
+    },
+    {
+      header: t('patientIdentifier', 'Patient identifier'),
       key: 'identifier',
     },
     {
-      header: t('name', 'Name'),
+      header: t('patientName', 'Patient name'),
       key: 'patientName',
     },
     {
-      header: t('billedItems', 'Billed Items'),
+      header: t('billedItems', 'Billed items'),
       key: 'billedItems',
     },
   ];
 
-  const searchResults = useMemo(() => {
-    if (!bills?.length) return bills;
+  const billList: Array<BillDisplayItem> = useMemo(() => {
+    const billingUrl = '${openmrsSpaBase}/home/billing/patient/${patientUuid}/${uuid}';
 
-    return bills
-      .map((bill) => {
-        if (bill.payments?.length > 0) {
-          const totalPaid = bill.payments.reduce((sum, payment) => sum + payment.amountTendered, 0);
-          if (totalPaid >= bill.totalAmount) {
-            bill.status = 'PAID';
-          }
-        }
-        return bill;
-      })
-      .filter((bill) => {
-        const statusMatch = billPaymentStatus === '' ? true : bill.status === billPaymentStatus;
-        const searchMatch = !searchString
-          ? true
-          : bill.patientName.toLowerCase().includes(searchString.toLowerCase()) ||
-            bill.identifier.toLowerCase().includes(searchString.toLowerCase());
+    const mappedBills = bills?.map((bill) => {
+      const object = {
+        ...bill,
+        id: String(bill.id),
+        dateCreated: bill.dateCreated ? formatDate(parseDate(bill.dateCreated), { mode: 'wide' }) : '--',
+        receiptNumberDisplay: (
+          <ConfigurableLink
+            style={{ textDecoration: 'none' }}
+            to={billingUrl}
+            templateParams={{ patientUuid: bill.patientUuid, uuid: bill.uuid }}>
+            {bill.receiptNumber}
+          </ConfigurableLink>
+        ),
+        billedItems: mapLineItems(bill),
+      };
+      return object;
+    });
 
-        return statusMatch && searchMatch;
-      });
-  }, [bills, searchString, billPaymentStatus]);
+    return mappedBills;
+  }, [bills]);
 
-  const { paginated, goTo, results, currentPage } = usePagination(searchResults, pageSize);
-
-  const setBilledItems = (bill) =>
-    bill?.lineItems?.reduce((acc, item) => acc + (acc ? ' & ' : '') + (item.billableService || item.item || ''), '');
-
-  const billingUrl = '${openmrsSpaBase}/home/billing/patient/${patientUuid}/${uuid}';
-
-  const rowData = results?.map((bill, index) => {
-    return {
-      id: `${index}`,
-      uuid: bill.uuid,
-      patientName: (
-        <ConfigurableLink
-          style={{ textDecoration: 'none', maxWidth: '50%' }}
-          to={billingUrl}
-          templateParams={{ patientUuid: bill.patientUuid, uuid: bill.uuid }}>
-          {bill.patientName}
-        </ConfigurableLink>
-      ),
-      visitTime: bill.dateCreated,
-      identifier: bill.identifier,
-      department: '--',
-      billedItems: setBilledItems(bill),
-      billingPrice: '--',
-    };
-  });
+  // Check if user has applied any filters (not "All bills") or search
+  const hasActiveFiltersOrSearch =
+    searchString.trim() !== '' || billPaymentStatus.id !== '' || startDate !== null || endDate !== null;
 
   const handleSearch = useCallback(
     (e) => {
@@ -120,40 +164,35 @@ const BillsTable = () => {
     [goTo, setSearchString],
   );
 
-  const filterItems = [
-    { id: '', text: 'All bills' },
-    { id: 'PENDING', text: 'Pending bills' },
-    { id: 'PAID', text: 'Paid bills' },
-  ];
+  const handleFilterChange = useCallback(
+    ({ selectedItem }) => {
+      setBillPaymentStatus(selectedItem);
+      goTo(1);
+    },
+    [goTo],
+  );
 
-  const handleFilterChange = ({ selectedItem }) => {
-    setBillPaymentStatus(selectedItem.id);
-  };
+  const handleStartDateChange = useCallback(
+    (date: Date | null | undefined) => {
+      setStartDate(date ?? null);
+      goTo(1);
+    },
+    [goTo],
+  );
 
-  if (isLoading) {
-    return (
-      <div className={styles.loaderContainer}>
-        <DataTableSkeleton
-          rowCount={pageSize}
-          showHeader={false}
-          showToolbar={false}
-          zebra
-          columnCount={headerData?.length}
-          size={responsiveSize}
-        />
-      </div>
-    );
-  }
+  const handleEndDateChange = useCallback(
+    (date: Date | null | undefined) => {
+      setEndDate(date ?? null);
+      goTo(1);
+    },
+    [goTo],
+  );
 
-  if (error) {
-    return (
-      <div className={styles.errorContainer}>
-        <Layer>
-          <ErrorState error={error} headerTitle={t('billsList', 'Bill list')} />
-        </Layer>
-      </div>
-    );
-  }
+  const handleClearDates = useCallback(() => {
+    setStartDate(null);
+    setEndDate(null);
+    goTo(1);
+  }, [goTo]);
 
   return (
     <>
@@ -161,36 +200,77 @@ const BillsTable = () => {
         <Dropdown
           className={styles.filterDropdown}
           direction="bottom"
-          id={`filter-${id}`}
-          initialSelectedItem={filterItems[1]}
-          items={filterItems}
-          itemToString={(item) => (item ? item.text : '')}
+          id="bill-payment-status-filter"
+          selectedItem={billPaymentStatus}
+          items={billPaymentStatusFilterItems}
+          itemToString={(item: BillPaymentStatusFilterItem) => (item ? item.text : '')}
           label=""
           onChange={handleFilterChange}
           size={responsiveSize}
-          titleText={t('filterBy', 'Filter by') + ':'}
+          titleText={t('filterBy', 'Filter by:')}
           type="inline"
         />
+        <div className={styles.datePickerContainer}>
+          <OpenmrsDatePicker
+            id="bill-start-date-filter"
+            labelText={t('from', 'From')}
+            maxDate={endDate}
+            value={startDate}
+            onChange={handleStartDateChange}
+            size={responsiveSize}
+          />
+          <OpenmrsDatePicker
+            id="bill-end-date-filter"
+            labelText={t('to', 'To')}
+            minDate={startDate}
+            value={endDate}
+            onChange={handleEndDateChange}
+            size={responsiveSize}
+            invalidText={t('endDateBeforeStartDate', 'End date must be after the start date')}
+          />
+          {startDate || endDate ? (
+            <Button className={styles.clearDatesButton} kind="ghost" onClick={handleClearDates} size={responsiveSize}>
+              {t('clearDates', 'Clear dates')}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
-      {bills?.length > 0 ? (
+      {isLoading && !bills?.length ? (
+        <div className={styles.loaderContainer} data-testid="bills-table-skeleton">
+          <DataTableSkeleton
+            rowCount={pageSize}
+            showHeader={false}
+            showToolbar={false}
+            zebra
+            columnCount={headerData?.length}
+          />
+        </div>
+      ) : error ? (
+        <div className={styles.errorContainer}>
+          <Layer>
+            <ErrorState error={error} headerTitle={t('billList', 'Bill list')} />
+          </Layer>
+        </div>
+      ) : billList?.length > 0 || hasActiveFiltersOrSearch ? (
         <div className={styles.billListContainer}>
           <FilterableTableHeader
             handleSearch={handleSearch}
             isValidating={isValidating}
             layout={layout}
             responsiveSize={responsiveSize}
+            searchString={searchString}
             t={t}
           />
           <DataTable
             isSortable
-            rows={rowData}
+            rows={billList}
             headers={headerData}
             size={responsiveSize}
-            useZebraStyles={rowData?.length > 1 ? true : false}>
+            useZebraStyles={billList?.length > 1 ? true : false}>
             {({ rows, headers, getRowProps, getTableProps }) => (
               <TableContainer>
-                <Table {...getTableProps()} aria-label="bill list">
+                <Table {...getTableProps()} aria-label={t('billList', 'Bill list')}>
                   <TableHead>
                     <TableRow>
                       {headers.map((header) => (
@@ -215,7 +295,7 @@ const BillsTable = () => {
               </TableContainer>
             )}
           </DataTable>
-          {searchResults?.length === 0 && (
+          {billList?.length === 0 && (
             <div className={styles.filterEmptyState}>
               <Layer level={0}>
                 <Tile className={styles.filterEmptyStateTile}>
@@ -227,22 +307,22 @@ const BillsTable = () => {
               </Layer>
             </div>
           )}
-          {paginated && (
+          {totalCount > 0 && (
             <Pagination
-              forwardText="Next page"
-              backwardText="Previous page"
+              forwardText={t('nextPage', 'Next page')}
+              backwardText={t('previousPage', 'Previous page')}
               page={currentPage}
               pageSize={pageSize}
               pageSizes={pageSizes}
-              totalItems={searchResults?.length}
-              className={styles.pagination}
-              size={responsiveSize}
-              onChange={({ pageSize: newPageSize, page: newPage }) => {
+              totalItems={totalCount}
+              onChange={({ pageSize: newPageSize, page }) => {
                 if (newPageSize !== pageSize) {
+                  // User changed page size, reset to page 1
                   setPageSize(newPageSize);
-                }
-                if (newPage !== currentPage) {
-                  goTo(newPage);
+                  goTo(1);
+                } else if (page !== currentPage) {
+                  // User navigated to different page
+                  goTo(page);
                 }
               }}
             />
@@ -254,7 +334,7 @@ const BillsTable = () => {
             <div className={styles.illo}>
               <EmptyCardIllustration />
             </div>
-            <p className={styles.content}>There are no bills to display.</p>
+            <p className={styles.content}>{t('noBillsToDisplay', 'There are no bills to display.')}</p>
           </Tile>
         </Layer>
       )}
@@ -262,7 +342,23 @@ const BillsTable = () => {
   );
 };
 
-function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveSize, t }) {
+interface FilterableTableHeaderProps {
+  layout: LayoutType;
+  handleSearch: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  isValidating: boolean;
+  responsiveSize: 'sm' | 'md' | 'lg';
+  searchString: string;
+  t: (key: string, fallback: string) => string;
+}
+
+function FilterableTableHeader({
+  layout,
+  handleSearch,
+  isValidating,
+  responsiveSize,
+  searchString,
+  t,
+}: FilterableTableHeaderProps) {
   return (
     <>
       <div className={styles.headerContainer}>
@@ -273,13 +369,21 @@ function FilterableTableHeader({ layout, handleSearch, isValidating, responsiveS
           })}>
           <h4>{t('billList', 'Bill list')}</h4>
         </div>
-        <div className={styles.backgroundDataFetchingIndicator}>
-          <span>{isValidating ? <InlineLoading /> : null}</span>
-        </div>
+        {isValidating && (
+          <div className={styles.backgroundDataFetchingIndicator}>
+            <span>
+              <InlineLoading />
+            </span>
+          </div>
+        )}
       </div>
       <Search
-        labelText=""
-        placeholder={t('filterTable', 'Filter table')}
+        autoFocus
+        closeButtonLabelText={t('clearSearch', 'Clear')}
+        data-testid="billsTableSearchBar"
+        labelText={t('searchForPatient', 'Search for a patient')}
+        placeholder={t('filterBillsByPatient', 'Filter bills by patient name or identifier')}
+        value={searchString}
         onChange={handleSearch}
         size={responsiveSize}
       />

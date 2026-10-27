@@ -48,7 +48,6 @@ export interface MappedBill {
   tenderedAmount?: number;
   display?: string;
   visitUuid?: string;
-  amountAfterDiscount?: number;
 }
 
 interface LocationLink {
@@ -188,17 +187,14 @@ export interface PatientInvoice {
 
 export interface PatientDetails {
   name: string;
-  age: string;
+  birthDate: string;
   gender: string;
-  city: string;
-  county: string;
-  subCounty: string;
+  address: string;
 }
 
 export interface FacilityDetail {
   uuid: string;
   display: string;
-  links: LocationLink[];
 }
 
 export type ConceptSearchResult = {
@@ -215,8 +211,6 @@ export type BillableItem = {
   id?: number;
   name?: string;
   commonName?: string;
-  drugName?: string;
-  purchasePrice?: number;
   servicePrices?: ServicePrice[];
 };
 
@@ -261,6 +255,15 @@ export interface BillableCommodity {
     description?: string;
   };
   billableService?: BillableService;
+}
+
+export interface StockItem {
+  uuid: string;
+  drugUuid: string;
+  drugName: string;
+  conceptUuid: string;
+  conceptName: string;
+  commonName: string;
 }
 
 export type PaymentRequestPayload = {
@@ -396,48 +399,4 @@ export interface DecideRefundPayload {
   status: Exclude<RefundStatus, 'REQUESTED'>;
   approver?: string;
   completer?: string;
-}
-
-export interface PaymentMode {
-  uuid: string;
-  name: string;
-  description?: string;
-}
-
-export interface PaymentMethod {
-  uuid: string;
-  name: string;
-  description: string;
-}
-
-export type ServiceConcept = {
-  uuid: any;
-  concept: {
-    uuid: string;
-    display: string;
-  };
-  conceptName: {
-    uuid: string;
-    display: string;
-  };
-  display: string;
-};
-
-export interface StockItem {
-  uuid: string;
-  drugUuid: string;
-  drugName: string;
-  conceptUuid: string;
-  conceptName: string;
-  commonName: string;
-}
-
-export interface CashierItem {
-  uuid: string;
-  display: string;
-  name: string;
-  price: number;
-  paymentMode: PaymentMode;
-  item: string;
-  billableService: BillableService;
 }

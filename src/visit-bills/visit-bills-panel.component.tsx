@@ -32,7 +32,7 @@ interface VisitBillsPanelProps {
 const VisitBillsPanel: React.FC<VisitBillsPanelProps> = ({ visit, patientUuid }) => {
   const { t } = useTranslation();
   const { defaultCurrency } = useConfig<BillingConfig>();
-  const { bills, error, isLoading, isValidating, mutate } = useBills(patientUuid, '');
+  const { bills, error, isLoading, isValidating, mutate } = useBills(patientUuid, undefined, visit.uuid);
   const billsByUuid = useMemo(() => new Map(bills?.map((bill) => [bill.uuid, bill])), [bills]);
 
   const headerData = [

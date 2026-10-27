@@ -8,7 +8,6 @@ const mockUsePatientPaymentStatus = vi.mocked(usePatientPaymentStatus);
 
 vi.mock('../billing.resource', () => ({
   usePatientPaymentStatus: vi.fn(),
-  useStockItems: vi.fn(),
 }));
 
 const patientUuid = 'test-patient-uuid';

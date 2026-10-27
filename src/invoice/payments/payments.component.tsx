@@ -1,24 +1,24 @@
 import React from 'react';
+import { Button, Layer, Tile } from '@carbon/react';
 import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@carbon/react';
 import { CardHeader, navigate, showSnackbar, useConfig, useVisit } from '@openmrs/esm-framework';
-import { useSWRConfig } from 'swr';
-import { type MappedBill } from '../../types';
-import { convertToCurrency } from '../../helpers';
-import { processBillPayment, patientPaymentStatusCacheKey } from '../../billing.resource';
 import { InvoiceBreakDown } from './invoice-breakdown/invoice-breakdown.component';
 import PaymentForm from './payment-form/payment-form.component';
 import PaymentHistory from './payment-history/payment-history.component';
+import { useSWRConfig } from 'swr';
+import { processBillPayment, patientPaymentStatusCacheKey } from '../../billing.resource';
 import { updateBillVisitAttribute } from './payment.resource';
-import { BillStatus, RefundStatus } from '../../types';
+import { convertToCurrency } from '../../helpers';
+import { BillStatus, RefundStatus, type MappedBill } from '../../types';
 import styles from './payments.scss';
 
 type PaymentProps = {
   bill: MappedBill;
   mutate: () => void;
+  onFinalizeBill: () => void;
 };
 
 export type Payment = { method: string; amount: number | undefined; referenceCode?: number | string };
@@ -27,12 +27,9 @@ export type PaymentFormValue = {
   payment: Payment;
 };
 
-const Payments: React.FC<PaymentProps> = ({ bill, mutate }) => {
+const Payments: React.FC<PaymentProps> = ({ bill, mutate, onFinalizeBill }) => {
   const { t } = useTranslation();
   const { mutate: swrMutate } = useSWRConfig();
-  const { currentVisit } = useVisit(bill?.patientUuid);
-  const { defaultCurrency } = useConfig();
-
   const paymentSchema = z.object({
     method: z.string().refine((value) => !!value, 'Payment method is required'),
     amount: z
@@ -48,7 +45,8 @@ const Payments: React.FC<PaymentProps> = ({ bill, mutate }) => {
   });
 
   const paymentFormSchema = z.object({ payment: paymentSchema });
-
+  const { currentVisit } = useVisit(bill?.patientUuid);
+  const { defaultCurrency } = useConfig();
   const defaultPaymentValues: PaymentFormValue = {
     payment: { method: '', amount: undefined, referenceCode: '' },
   };
@@ -79,6 +77,7 @@ const Payments: React.FC<PaymentProps> = ({ bill, mutate }) => {
     .reduce((sum, r) => sum + r.refundAmount, 0);
 
   const amountDue = (bill.netAmount ?? 0) - (bill.tenderedAmount ?? 0);
+  const isPending = bill.status === BillStatus.PENDING;
 
   const handleProcessPayment = async () => {
     if (!formValues?.method || formValues.amount == null) {
@@ -122,8 +121,26 @@ const Payments: React.FC<PaymentProps> = ({ bill, mutate }) => {
             <span></span>
           </CardHeader>
           <div>
-            <PaymentHistory bill={bill} />
-            <PaymentForm disablePayment={amountDue <= 0 || bill.status === BillStatus.PENDING} />
+            {isPending ? (
+              <div className={styles.pendingEmptyState}>
+                <Layer>
+                  <Tile className={styles.pendingEmptyStateTile}>
+                    <p className={styles.pendingEmptyStateContent}>{t('billNotFinalized', 'Bill not finalized')}</p>
+                    <p className={styles.pendingEmptyStateHelper}>
+                      {t('finalizeBillToRecordPayment', 'Finalize this bill before recording a payment.')}
+                    </p>
+                    <Button className={styles.finalizeButton} kind="primary" size="sm" onClick={onFinalizeBill}>
+                      {t('finalizeBill', 'Finalize bill')}
+                    </Button>
+                  </Tile>
+                </Layer>
+              </div>
+            ) : (
+              <>
+                <PaymentHistory bill={bill} />
+                <PaymentForm disablePayment={amountDue <= 0} />
+              </>
+            )}
           </div>
         </div>
         <div className={styles.divider} />
@@ -153,11 +170,13 @@ const Payments: React.FC<PaymentProps> = ({ bill, mutate }) => {
             <Button onClick={handleNavigateToBillingDashboard} kind="secondary">
               {t('discard', 'Discard')}
             </Button>
-            <Button
-              onClick={handleProcessPayment}
-              disabled={!formValues?.method || formValues.amount == null || !methods.formState.isValid}>
-              {t('processPayment', 'Process Payment')}
-            </Button>
+            {!isPending && (
+              <Button
+                onClick={handleProcessPayment}
+                disabled={!formValues?.method || formValues.amount == null || !methods.formState.isValid}>
+                {t('processPayment', 'Process Payment')}
+              </Button>
+            )}
           </div>
         </div>
       </div>

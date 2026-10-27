@@ -128,8 +128,8 @@ describe('RequestRefundModal', () => {
 
     expect(screen.getByText(/already refunded/i)).toBeInTheDocument();
     // summary shows amountAfterDiscount (150) as bill total, prior refund (40), and remainder (80)
-    expect(screen.getByText(/\$150/)).toBeInTheDocument();
-    expect(screen.getByText(/\$80/)).toBeInTheDocument();
+    expect(screen.getByText('$150.00')).toBeInTheDocument();
+    expect(screen.getByText('$80.00')).toBeInTheDocument();
   });
 
   it('hides already-refunded row when there are no prior refunds', async () => {
@@ -163,7 +163,7 @@ describe('RequestRefundModal', () => {
 
     expect(screen.getByText(/already refunded/i)).toBeInTheDocument();
     // amount after refund: remainingRefundable − amount = 80 − 50 = 30
-    expect(screen.getByText(/\$30/)).toBeInTheDocument();
+    expect(screen.getByText('$30.00')).toBeInTheDocument();
   });
 
   it('hides already-refunded row for a line item with no prior refunds', async () => {

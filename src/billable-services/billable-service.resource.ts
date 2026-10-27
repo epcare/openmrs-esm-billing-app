@@ -1,8 +1,9 @@
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
 import { type OpenmrsResource, openmrsFetch, restBaseUrl, useOpenmrsFetchAll, useConfig } from '@openmrs/esm-framework';
 import { apiBasePath } from '../constants';
 import type {
   BillableService,
+  BillableCommodity,
   ConceptSearchResult,
   CreateBillableServicePayload,
   PaymentModePayload,
@@ -27,12 +28,10 @@ export const useBillableServices = () => {
 
 export function useServiceTypes() {
   const { serviceTypes } = useConfig<BillingConfig>();
-  const DEFAULT_SERVICE_CONCEPT_UUID = '609afe4f-d539-4dfe-896d-0b9897d0ee4a';
-  const serviceConceptUuid = serviceTypes?.billableService ?? DEFAULT_SERVICE_CONCEPT_UUID;
-
+  const serviceConceptUuid = serviceTypes.billableService;
   const url = `${restBaseUrl}/concept/${serviceConceptUuid}?v=custom:(setMembers:(uuid,display))`;
 
-  const { data, error, isLoading } = useSWR<{ data: { setMembers: Array<{ uuid: string; display: string }> } }, Error>(
+  const { data, error, isLoading } = useSWR<{ data: { setMembers: Array<{ uuid: string; display: string }> } }>(
     url,
     openmrsFetch,
   );
@@ -45,7 +44,6 @@ export function useServiceTypes() {
     serviceTypes: sortedServiceTypes,
     error,
     isLoadingServiceTypes: isLoading,
-    configUuid: serviceConceptUuid,
   };
 }
 
@@ -95,14 +93,8 @@ export const createBillableService = async (payload: CreateBillableServicePayloa
     },
   });
 
-  // Revalidate the billable services cache using the exact URL
-  await mutate(`${apiBasePath}${BILLABLE_SERVICES_URL}`);
-
   return response;
 };
-
-// Alias for backwards compatibility with typo
-export const createBillableSerice = createBillableService;
 
 export const updateBillableService = async (uuid: string, payload: UpdateBillableServicePayload) => {
   const url = `${apiBasePath}billableService/${uuid}`;
@@ -113,9 +105,6 @@ export const updateBillableService = async (uuid: string, payload: UpdateBillabl
       'Content-Type': 'application/json',
     },
   });
-
-  // Revalidate the billable services cache using the exact URL
-  await mutate(`${apiBasePath}${BILLABLE_SERVICES_URL}`);
 
   return response;
 };
@@ -142,56 +131,22 @@ export const updatePaymentMode = (uuid: string, payload: PaymentModePayload) => 
   });
 };
 
-// Additional functions from original billing-app
-
-export type CashierItem = {
-  uuid: string;
-  display: string;
-  name: string;
-  price: number;
-  paymentMode: PaymentMode;
-  item: string;
-  billableService: BillableService;
-};
-
-export type ServiceConcept = {
-  uuid: any;
-  concept: {
-    uuid: string;
-    display: string;
-  };
-  conceptName: {
-    uuid: string;
-    display: string;
-  };
-  display: string;
-};
-
-export const createBillableCommodity = (payload: any) => {
-  const url = `${apiBasePath}cashierItemPrice`;
-  return openmrsFetch(url, {
+export const createBillableCommodity = (payload: unknown) =>
+  openmrsFetch(`${apiBasePath}cashierItemPrice`, {
     method: 'POST',
     body: payload,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
   });
-};
 
 export function useBillableCommodities() {
-  const apiURL = `${apiBasePath}cashierItemPrice?v=default`;
-
-  const { data, error, isLoading, isValidating, mutate } = useSWR<{ data: { results: Array<CashierItem> } }, Error>(
-    apiURL,
-    openmrsFetch,
-  );
-
-  const filteredCommodities = (data?.data?.results ?? []).filter(
-    (commodity) => commodity.item && commodity.item.trim() !== '',
-  );
+  const url = `${apiBasePath}cashierItemPrice?v=default`;
+  const { data, error, isLoading, isValidating, mutate } = useSWR<
+    { data: { results: Array<BillableCommodity> } },
+    Error
+  >(url, openmrsFetch);
 
   return {
-    billableCommodities: filteredCommodities,
+    billableCommodities: (data?.data?.results ?? []).filter((commodity) => commodity.item?.trim()),
     error,
     isLoading,
     isValidating,
@@ -199,35 +154,15 @@ export function useBillableCommodities() {
   };
 }
 
-export const updateBillableCommodity = (uuid: string, payload: any) => {
-  const url = `${apiBasePath}cashierItemPrice/${uuid}`;
-  return openmrsFetch(url, {
+export const updateBillableCommodity = (uuid: string, payload: unknown) =>
+  openmrsFetch(`${apiBasePath}cashierItemPrice/${uuid}`, {
     method: 'POST',
-    body: JSON.stringify(payload),
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    body: payload,
+    headers: { 'Content-Type': 'application/json' },
   });
-};
 
-export const deleteBillableCommodity = (uuid: string) => {
-  const url = `${apiBasePath}cashierItemPrice/${uuid}`;
+export const deleteBillableCommodity = (uuid: string) =>
+  openmrsFetch(`${apiBasePath}cashierItemPrice/${uuid}`, { method: 'DELETE' });
 
-  return openmrsFetch(url, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-};
-
-export const deleteBillableService = (uuid: string) => {
-  const url = `${apiBasePath}billableService/${uuid}`;
-
-  return openmrsFetch(url, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-};
+export const deleteBillableService = (uuid: string) =>
+  openmrsFetch(`${apiBasePath}billableService/${uuid}`, { method: 'DELETE' });

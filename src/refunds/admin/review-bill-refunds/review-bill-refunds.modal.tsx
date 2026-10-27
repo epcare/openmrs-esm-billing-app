@@ -22,7 +22,7 @@ interface Props {
 const ReviewBillRefundsModal: React.FC<Props> = ({ closeModal, bill, onMutate }) => {
   const { t } = useTranslation();
   const session = useSession();
-  const { bill: localBill, mutate: localMutate, isLoading, isValidating, error } = useBill(bill.uuid);
+  const { bill: localBill, mutate: localMutate, isLoading, isValidating, error } = useBill(bill.uuid, false);
   const activeBill = localBill ?? bill;
   const [processingRefundId, setProcessingRefundId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);

@@ -8,7 +8,6 @@ const mockUseDefaultFacility = vi.mocked<typeof useDefaultFacility>(useDefaultFa
 
 vi.mock('../../billing.resource', () => ({
   useDefaultFacility: vi.fn(),
-  useStockItems: vi.fn(),
 }));
 
 describe('PrintableFooter', () => {

@@ -107,8 +107,7 @@ describe('PaymentHistory Component', () => {
   };
 
   it('renders without crashing', () => {
-    const { container } = render(<PaymentHistory bill={mockBill} />);
-    expect(container).toBeInTheDocument();
+    render(<PaymentHistory bill={mockBill} />);
   });
 
   it('renders correct table headers', () => {

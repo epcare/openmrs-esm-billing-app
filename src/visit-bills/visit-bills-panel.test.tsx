@@ -11,7 +11,6 @@ const mockUseBills = vi.mocked<typeof useBills>(useBills);
 
 vi.mock('../billing.resource', () => ({
   useBills: vi.fn(),
-  useStockItems: vi.fn(),
 }));
 
 vi.mock('../invoice/invoice-table.component', () => ({
@@ -100,7 +99,7 @@ describe('VisitBillsPanel', () => {
     expect(screen.getByText('Bill total')).toBeInTheDocument();
   });
 
-  it('passes patientUuid to useBills', () => {
+  it('passes visitUuid to useBills', () => {
     mockUseBills.mockReturnValueOnce({
       bills: [],
       isLoading: false,
@@ -109,6 +108,6 @@ describe('VisitBillsPanel', () => {
       mutate: vi.fn(),
     });
     render(<VisitBillsPanel {...testProps} />);
-    expect(mockUseBills).toHaveBeenCalledWith('patient-uuid-456', '');
+    expect(mockUseBills).toHaveBeenCalledWith('patient-uuid-456', undefined, 'visit-uuid-123');
   });
 });

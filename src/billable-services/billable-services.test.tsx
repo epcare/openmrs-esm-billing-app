@@ -1,64 +1,19 @@
 import React from 'react';
+import { describe, expect, type Mock, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { launchWorkspace2 } from '@openmrs/esm-framework';
 import BillableServices from './billable-services.component';
 import { useBillableServices } from './billable-service.resource';
 
-// Mock the resource
 vi.mock('./billable-service.resource', () => ({
   useBillableServices: vi.fn(),
 }));
 
-// Mock @openmrs/esm-framework
-vi.mock('@openmrs/esm-framework', () => ({
-  EmptyCard: vi.fn(({ displayText, headerTitle }) => (
-    <div data-testid="empty-card">
-      <h1>{headerTitle}</h1>
-      <p>{displayText}</p>
-    </div>
-  )),
-  useLayoutType: vi.fn(() => 'desktop'),
-  isDesktop: vi.fn(() => true),
-  useConfig: vi.fn(() => ({
-    billableServices: {
-      pageSizes: [10, 20, 30, 40, 50],
-      pageSize: 10,
-    },
-  })),
-  usePagination: vi.fn().mockImplementation((data) => ({
-    currentPage: 1,
-    goTo: vi.fn(),
-    results: data,
-    paginated: true,
-  })),
-  launchWorkspace2: vi.fn(),
-  ErrorState: vi.fn(({ error }) => <div>Error: {error?.message || error}</div>),
-  restBaseUrl: 'http://localhost',
-}));
-
-// Mock i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, defaultValueOrOptions: string | object) => {
-      // Handle both t('key', 'defaultValue') and t('key', { defaultValue: 'value' }) formats
-      if (typeof defaultValueOrOptions === 'string') {
-        return defaultValueOrOptions;
-      }
-      if (typeof defaultValueOrOptions === 'object' && defaultValueOrOptions !== null) {
-        return defaultValueOrOptions.defaultValue || key;
-      }
-      return key;
-    },
-  }),
-}));
+const mockLaunchWorkspace2 = launchWorkspace2 as Mock;
 
 describe('BillableService', () => {
-  const mockedUseBillableServices = useBillableServices as any;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  const mockedUseBillableServices = useBillableServices as Mock;
 
   it('renders an empty state when there are no billable services', () => {
     mockedUseBillableServices.mockReturnValue({
@@ -71,8 +26,8 @@ describe('BillableService', () => {
 
     render(<BillableServices />);
 
-    expect(screen.getByTestId('empty-card')).toBeInTheDocument();
-    expect(screen.getAllByText('Billable service')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /record.*billable services/i })).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('renders billable services table correctly', () => {
@@ -106,10 +61,10 @@ describe('BillableService', () => {
     render(<BillableServices />);
 
     // Check table headers
-    expect(screen.getByText('Service Name')).toBeInTheDocument();
-    expect(screen.getByText('Short Name')).toBeInTheDocument();
-    expect(screen.getByText('Service Type')).toBeInTheDocument();
-    expect(screen.getByText('Service Status')).toBeInTheDocument();
+    expect(screen.getByText('Service name')).toBeInTheDocument();
+    expect(screen.getByText('Short name')).toBeInTheDocument();
+    expect(screen.getByText('Service type')).toBeInTheDocument();
+    expect(screen.getByText('Service status')).toBeInTheDocument();
 
     // Check service data
     expect(screen.getByText('Service 1')).toBeInTheDocument();
@@ -182,5 +137,56 @@ describe('BillableService', () => {
 
     expect(screen.getByText('No matching services to display')).toBeInTheDocument();
     expect(screen.getByText('Check the filters above')).toBeInTheDocument();
+  });
+
+  it('passes mutate as onWorkspaceClose when adding a new service so the table refreshes', async () => {
+    const mockMutate = vi.fn();
+    mockedUseBillableServices.mockReturnValue({
+      billableServices: [
+        {
+          uuid: '1',
+          name: 'Service 1',
+          shortName: 'S1',
+          serviceType: { display: 'Type 1' },
+          serviceStatus: 'ACTIVE',
+          servicePrices: [{ name: 'Price 1', price: 100 }],
+        },
+      ],
+      isLoading: false,
+      isValidating: false,
+      error: null,
+      mutate: mockMutate,
+    });
+
+    const user = userEvent.setup();
+    render(<BillableServices />);
+
+    await user.click(screen.getByRole('button', { name: /add new service/i }));
+
+    expect(mockLaunchWorkspace2).toHaveBeenCalledWith(
+      'billable-service-form',
+      expect.objectContaining({ onWorkspaceClose: mockMutate }),
+    );
+  });
+
+  it('passes mutate as onWorkspaceClose when adding the first service from the empty state', async () => {
+    const mockMutate = vi.fn();
+    mockedUseBillableServices.mockReturnValue({
+      billableServices: [],
+      isLoading: false,
+      isValidating: false,
+      error: null,
+      mutate: mockMutate,
+    });
+
+    const user = userEvent.setup();
+    render(<BillableServices />);
+
+    await user.click(screen.getByRole('button', { name: /record.*billable services/i }));
+
+    expect(mockLaunchWorkspace2).toHaveBeenCalledWith(
+      'billable-service-form',
+      expect.objectContaining({ onWorkspaceClose: mockMutate }),
+    );
   });
 });

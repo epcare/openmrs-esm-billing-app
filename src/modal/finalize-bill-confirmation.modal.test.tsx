@@ -13,7 +13,6 @@ const mockShowSnackbar = vi.mocked(showSnackbar);
 
 vi.mock('../billing.resource', () => ({
   finalizeBill: vi.fn(),
-  useStockItems: vi.fn(),
 }));
 
 const mockBill: MappedBill = {
