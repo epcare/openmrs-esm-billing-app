@@ -1,119 +1,237 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Button,
+  DataTable,
+  DatePicker,
+  DatePickerInput,
+  InlineLoading,
+  Layer,
+  Pagination,
+  Search,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tile,
+} from '@carbon/react';
+import { Download } from '@carbon/react/icons';
+import { ErrorState, formatDate, isDesktop, parseDate, useLayoutType, usePagination } from '@openmrs/esm-framework';
 import { useTranslation } from 'react-i18next';
-import { DateFilterInput } from './date-filter/date-filter-section';
-import { EmptyStateComponent } from './empty-state/empty-state.component';
 import { useBills } from '../../billing.resource';
-import DataList from './data-table/data-table.component';
-import styles from './bill-report.scss';
-import { formatDate, parseDate } from '@openmrs/esm-framework';
+import type { MappedBill, Payment } from '../../types';
+import styles from './billing-reports.scss';
 
-const BillingReports = () => {
-  const { t } = useTranslation();
-  const currentDate = new Date();
-  const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
-  const [dateArray, setDateArray] = useState([startOfMonth, endOfMonth]);
-  const [data, setData] = useState([]);
-  const [hasUpdatedBillData, setHasUpdatedBillData] = useState(true);
-  const { bills: billItems } = useBills();
+interface BillingReportRow {
+  id: string;
+  date: string;
+  identifier: string;
+  patientName: string;
+  billedItems: string;
+  amount: string;
+  status: string;
+  paymentMode: string;
+}
 
-  const headerData = [
-    {
-      header: t('date', 'Date'),
-      key: 'date',
-    },
-    {
-      header: t('identifier', 'Identifier'),
-      key: 'identifier',
-    },
-    {
-      header: t('patientName', 'Patient Names'),
-      key: 'name',
-    },
-    {
-      header: t('billedItems', 'Billed Items'),
-      key: 'billedItems',
-    },
-    {
-      header: t('amount', 'Amount'),
-      key: 'amount',
-    },
-    {
-      header: t('billStatus', 'Bill Status'),
-      key: 'status',
-    },
-    {
-      header: t('mode', 'Payment Mode'),
-      key: 'mode',
-    },
+const getMonthRange = (): [Date, Date] => {
+  const today = new Date();
+  return [
+    new Date(today.getFullYear(), today.getMonth(), 1),
+    new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999),
   ];
+};
 
-  const handleOnChangeRange = (dates: Array<Date>) => {
-    const start = dates[0];
+const formatPaymentModes = (payments: Payment[] = []) =>
+  payments
+    .filter((payment) => !payment.voided)
+    .map((payment) => {
+      const name = payment.instanceType?.name ?? '--';
+      return payments.length > 1 ? `${name} (${payment.amountTendered.toLocaleString()})` : name;
+    })
+    .join(' & ') || '--';
+
+export const createBillingReportRows = (bills: MappedBill[], range: [Date, Date]): BillingReportRow[] =>
+  bills
+    .filter((bill) => {
+      const date = new Date(bill.dateCreated);
+      return !Number.isNaN(date.getTime()) && date >= range[0] && date <= range[1];
+    })
+    .map((bill) => ({
+      id: bill.uuid,
+      date: formatDate(parseDate(bill.dateCreated), { mode: 'standard', noToday: true, time: false }),
+      identifier: bill.identifier || '--',
+      patientName: bill.patientName || '--',
+      billedItems:
+        bill.lineItems
+          ?.map((item) => {
+            const name = item.item || item.billableService;
+            return name ? `${name}${item.quantity > 0 ? ` (${item.quantity})` : ''}` : null;
+          })
+          .filter(Boolean)
+          .join(', ') || '--',
+      amount: (bill.netAmount ?? bill.totalAmount ?? 0).toLocaleString(),
+      status: bill.status || '--',
+      paymentMode: formatPaymentModes(bill.payments),
+    }));
+
+export const escapeCsvValue = (value: unknown) => {
+  const stringValue = String(value ?? '');
+  const spreadsheetSafeValue = /^[=+\-@\t\r]/.test(stringValue) ? `'${stringValue}` : stringValue;
+  return `"${spreadsheetSafeValue.replaceAll('"', '""')}"`;
+};
+
+const downloadCsv = (rows: BillingReportRow[], columns: Array<{ key: keyof BillingReportRow; header: string }>) => {
+  const csv = [
+    columns.map(({ header }) => escapeCsvValue(header)).join(','),
+    ...rows.map((row) => columns.map(({ key }) => escapeCsvValue(row[key])).join(',')),
+  ].join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `billing-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const BillingReports: React.FC = () => {
+  const { t } = useTranslation();
+  const layout = useLayoutType();
+  const responsiveSize = isDesktop(layout) ? 'sm' : 'lg';
+  const { bills = [], error, isLoading, isValidating } = useBills();
+  const [selectedRange, setSelectedRange] = useState<[Date, Date]>(getMonthRange);
+  const [appliedRange, setAppliedRange] = useState<[Date, Date]>(getMonthRange);
+  const [search, setSearch] = useState('');
+  const [pageSize, setPageSize] = useState(10);
+
+  const columns: Array<{ key: keyof BillingReportRow; header: string }> = useMemo(
+    () => [
+      { header: t('date', 'Date'), key: 'date' },
+      { header: t('identifier', 'Identifier'), key: 'identifier' },
+      { header: t('patientName', 'Patient name'), key: 'patientName' },
+      { header: t('billedItems', 'Billed items'), key: 'billedItems' },
+      { header: t('amount', 'Amount'), key: 'amount' },
+      { header: t('billStatus', 'Bill status'), key: 'status' },
+      { header: t('paymentMode', 'Payment mode'), key: 'paymentMode' },
+    ],
+    [t],
+  );
+
+  const rows = useMemo(() => createBillingReportRows(bills, appliedRange), [bills, appliedRange]);
+  const filteredRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return term
+      ? rows.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(term)))
+      : rows;
+  }, [rows, search]);
+  const { currentPage, goTo, results: paginatedRows } = usePagination(filteredRows, pageSize);
+
+  const handleDateChange = useCallback((dates: Date[]) => {
+    if (dates.length < 2) return;
     const end = new Date(dates[1]);
     end.setHours(23, 59, 59, 999);
-    setDateArray([start, end]);
-  };
+    setSelectedRange([dates[0], end]);
+  }, []);
 
-  const processBillReport = useCallback(() => {
-    const dataArray = [];
-    const filteredArray = billItems?.filter((item) => {
-      const itemDate = new Date(item.dateCreated);
-      return itemDate >= dateArray[0] && itemDate <= dateArray[1];
-    });
+  if (isLoading) {
+    return <InlineLoading description={t('loadingBillingReport', 'Loading billing report...')} />;
+  }
 
-    filteredArray?.forEach((item) => {
-      dataArray.push({
-        date: formatDate(parseDate(item.dateCreated), { mode: 'standard', noToday: true, time: false }),
-        name: item.patientName,
-        identifier: item.identifier,
-        billedItems: item?.lineItems
-          ?.map((bill) =>
-            bill?.item && bill?.quantity > 0 ? `${bill.item}(${bill.quantity})` : bill?.billableService || null,
-          )
-          ?.filter(Boolean)
-          ?.join(', '),
-        amount: item?.payments?.[0]?.amount.toLocaleString(),
-        status: item?.status,
-        mode:
-          item?.payments?.length > 1
-            ? item?.payments
-                ?.map((payment) => `${payment?.instanceType?.name} (${payment?.amountTendered.toLocaleString()})`)
-                ?.join(' & ')
-            : item?.payments?.[0]?.instanceType?.name,
-      });
-    });
-
-    return dataArray;
-  }, [billItems, dateArray]);
-  const updateBillReport = () => {
-    setData(processBillReport);
-  };
-
-  useEffect(() => {
-    if (hasUpdatedBillData && billItems?.length > 0) {
-      setData(processBillReport);
-      setHasUpdatedBillData(false);
-    }
-  }, [billItems, hasUpdatedBillData, processBillReport]);
+  if (error) {
+    return <ErrorState error={error} headerTitle={t('billReports', 'Billing reports')} />;
+  }
 
   return (
-    <>
-      <DateFilterInput
-        handleOnChangeRange={handleOnChangeRange}
-        updateBillReport={updateBillReport}
-        dateValue={dateArray}
-      />
+    <div className={styles.reportContainer}>
+      <div className={styles.filters}>
+        <DatePicker datePickerType="range" dateFormat="d/m/Y" onChange={handleDateChange} value={selectedRange}>
+          <DatePickerInput
+            id="billing-report-start-date"
+            labelText={t('startDate', 'Start date')}
+            placeholder="dd/mm/yyyy"
+          />
+          <DatePickerInput id="billing-report-end-date" labelText={t('endDate', 'End date')} placeholder="dd/mm/yyyy" />
+        </DatePicker>
+        <Button
+          kind="tertiary"
+          onClick={() => {
+            setAppliedRange(selectedRange);
+            goTo(1);
+          }}>
+          {t('updateReport', 'Update report')}
+        </Button>
+      </div>
 
-      {data.length > 0 ? (
-        <div className={styles.billTableContainer}>
-          <DataList data={data} columns={headerData} />
-        </div>
+      <div className={styles.toolbar}>
+        <Search
+          labelText={t('searchThisList', 'Search this list')}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            goTo(1);
+          }}
+          placeholder={t('searchThisList', 'Search this list')}
+          size={responsiveSize}
+          value={search}
+        />
+        <Button
+          disabled={!filteredRows.length}
+          kind="ghost"
+          renderIcon={Download}
+          onClick={() => downloadCsv(filteredRows, columns)}>
+          {t('downloadCsv', 'Download CSV')}
+        </Button>
+      </div>
+
+      {isValidating && <InlineLoading className={styles.validating} />}
+      {filteredRows.length ? (
+        <>
+          <DataTable rows={paginatedRows} headers={columns} size={responsiveSize} useZebraStyles>
+            {({ rows: tableRows, headers, getTableProps }) => (
+              <TableContainer>
+                <Table {...getTableProps()} aria-label={t('billReports', 'Billing reports')}>
+                  <TableHead>
+                    <TableRow>
+                      {headers.map((header) => (
+                        <TableHeader key={header.key}>{header.header}</TableHeader>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {tableRows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.cells.map((cell) => (
+                          <TableCell key={cell.id}>{cell.value}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </DataTable>
+          <Pagination
+            backwardText={t('previousPage', 'Previous page')}
+            forwardText={t('nextPage', 'Next page')}
+            page={currentPage}
+            pageSize={pageSize}
+            pageSizes={[10, 20, 30, 40, 50]}
+            totalItems={filteredRows.length}
+            onChange={({ page, pageSize: nextPageSize }) => {
+              setPageSize(nextPageSize);
+              goTo(page);
+            }}
+          />
+        </>
       ) : (
-        <EmptyStateComponent title={`Click on one of the profiles above`} />
+        <Layer>
+          <Tile className={styles.emptyState}>
+            <h4>{t('noBillingReportData', 'No billing data for this date range')}</h4>
+            <p>{t('checkFilters', 'Check the filters above')}</p>
+          </Tile>
+        </Layer>
       )}
-    </>
+    </div>
   );
 };
 
