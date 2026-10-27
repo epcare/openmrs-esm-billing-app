@@ -23,7 +23,6 @@ import { ArrowRight } from '@carbon/react/icons';
 import {
   useLayoutType,
   isDesktop,
-  useConfig,
   usePagination,
   ErrorState,
   EmptyCard,
@@ -37,7 +36,6 @@ const BillableCommodities = () => {
   const { t } = useTranslation();
   const { billableCommodities, isLoading, isValidating, error, mutate } = useBillableCommodities();
   const layout = useLayoutType();
-  const config = useConfig();
   const [searchString, setSearchString] = useState('');
   const responsiveSize = isDesktop(layout) ? 'lg' : 'sm';
   const pageSizes = [10, 20, 30, 40, 50];
@@ -75,11 +73,13 @@ const BillableCommodities = () => {
 
     if (flatBillableCommodities !== undefined && flatBillableCommodities.length > 0) {
       if (searchString && searchString.trim() !== '') {
-        const search = searchString.toLowerCase();
+        const search = searchString.trim().toLocaleLowerCase();
         return flatBillableCommodities.filter((commodity: BillableCommodity) =>
-          Object.entries(commodity).some(([header, value]) => {
-            return header === 'uuid' ? false : `${value}`.toLowerCase().includes(search);
-          }),
+          [commodity.item, commodity.shortName, commodity.paymentMode?.name, commodity.price].some((value) =>
+            String(value ?? '')
+              .toLocaleLowerCase()
+              .includes(search),
+          ),
         );
       }
     }
@@ -90,9 +90,9 @@ const BillableCommodities = () => {
   const rowData = [];
 
   if (paginatedList) {
-    paginatedList.forEach((commodity, index) => {
+    paginatedList.forEach((commodity) => {
       const c = {
-        id: `${index}`,
+        id: commodity.uuid,
         uuid: commodity.uuid,
         itemName: commodity.item || '--',
         shortName: commodity.shortName || '--',
@@ -100,7 +100,9 @@ const BillableCommodities = () => {
         price: '--',
       };
       c.price =
-        commodity.price && commodity.paymentMode?.name ? `${commodity.paymentMode.name} (${commodity.price})` : '--';
+        commodity.price != null && commodity.paymentMode?.name
+          ? `${commodity.paymentMode.name} (${commodity.price})`
+          : '--';
       rowData.push(c);
     });
   }

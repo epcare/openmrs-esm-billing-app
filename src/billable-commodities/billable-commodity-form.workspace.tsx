@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import {
+  ActionableNotification,
   Button,
   ButtonSet,
   Form,
@@ -27,11 +28,13 @@ import {
   Workspace2,
   type Workspace2DefinitionProps,
 } from '@openmrs/esm-framework';
-import type { StockItem } from '../types';
+import type { BillableCommodity, StockItem } from '../types';
 import { useFetchChargeItems } from '../billing.resource';
 import {
-  createBillableCommodity,
+  createBillableCommodities,
+  type PaymentMode,
   updateBillableCommodity,
+  useBillableCommodities,
   usePaymentModes,
 } from '../billable-services/billable-service.resource';
 import styles from './charge-items-form.scss';
@@ -56,7 +59,7 @@ interface BillableCommodityFormData {
 
 const DEFAULT_PAYMENT_OPTION: PaymentModeForm = { paymentMode: '', price: '' };
 
-const createBillableCommoditySchema = (t: TFunction) => {
+export const createBillableCommoditySchema = (t: TFunction) => {
   const servicePriceSchema = z.object({
     paymentMode: z
       .string({
@@ -84,7 +87,27 @@ const createBillableCommoditySchema = (t: TFunction) => {
   });
 
   return z.object({
-    payment: z.array(servicePriceSchema).min(1, t('paymentOptionRequired', 'At least one payment option is required')),
+    payment: z
+      .array(servicePriceSchema)
+      .min(1, t('paymentOptionRequired', 'At least one payment option is required'))
+      .superRefine((payments, ctx) => {
+        const selectedPaymentModes = new Set<string>();
+
+        payments.forEach(({ paymentMode }, index) => {
+          if (!paymentMode || selectedPaymentModes.has(paymentMode)) {
+            if (paymentMode) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [index, 'paymentMode'],
+                message: t('paymentModeMustBeUnique', 'Each payment mode can only be selected once'),
+              });
+            }
+            return;
+          }
+
+          selectedPaymentModes.add(paymentMode);
+        });
+      }),
   });
 };
 
@@ -99,6 +122,71 @@ export const normalizePrice = (price: string | number | undefined): number => {
   return parseFloat(String(price));
 };
 
+export const buildBillableCommodityPricePayload = (payment: PaymentModeForm, paymentModes: PaymentMode[]) => {
+  const paymentMode = paymentModes.find((mode) => mode.uuid === payment.paymentMode);
+
+  return {
+    name: paymentMode?.name || 'Unknown',
+    price: normalizePrice(payment.price),
+    paymentMode: {
+      uuid: payment.paymentMode,
+      name: paymentMode?.name || '',
+    },
+  };
+};
+
+export const isDuplicateCommodityPrice = (
+  billableCommodities: BillableCommodity[],
+  itemName: string,
+  paymentModeUuid: string,
+  commodityUuidToExclude?: string,
+) => {
+  const normalizedItemName = itemName.trim().toLocaleLowerCase();
+
+  return billableCommodities.some(
+    (commodity) =>
+      commodity.uuid !== commodityUuidToExclude &&
+      commodity.item.trim().toLocaleLowerCase() === normalizedItemName &&
+      commodity.paymentMode?.uuid === paymentModeUuid,
+  );
+};
+
+export const CommoditySearchError = ({ onRetry, t }: { onRetry: () => void; t: TFunction }) => (
+  <ActionableNotification
+    actionButtonLabel={t('retry', 'Retry')}
+    hideCloseButton
+    inline
+    kind="error"
+    lowContrast
+    onActionButtonClick={onRetry}
+    subtitle={t('commoditySearchErrorMessage', 'Commodity search failed. Please try again.')}
+    title={t('commoditySearchError', 'Unable to search commodities')}
+  />
+);
+
+export const CommoditySearchResult = ({
+  searchResult,
+  onSelect,
+}: {
+  searchResult: StockItem;
+  onSelect: (item: StockItem) => void;
+}) => (
+  <li>
+    <button className={styles.service} onClick={() => onSelect(searchResult)} type="button">
+      {searchResult.drugName}
+    </button>
+  </li>
+);
+
+export const RemovePaymentOptionButton = ({ label, onRemove }: { label: string; onRemove: () => void }) => (
+  <button aria-label={label} className={styles.removeButton} onClick={onRemove} type="button">
+    <TrashCan aria-hidden="true" size={20} />
+  </button>
+);
+
+export const hasUnsavedCommodityChanges = (isDirty: boolean, selectedItem: StockItem | null) =>
+  isDirty || selectedItem !== null;
+
 const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<BillableCommodityFormWorkspaceProps>> = ({
   workspaceProps: { itemToEdit, closeWorkspaceWithSavedChanges, onWorkspaceClose },
   closeWorkspace,
@@ -107,6 +195,11 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
   const layout = useLayoutType();
   const isTablet = layout === 'tablet';
   const { paymentModes, isLoadingPaymentModes } = usePaymentModes();
+  const {
+    billableCommodities,
+    error: billableCommoditiesError,
+    isLoading: isLoadingBillableCommodities,
+  } = useBillableCommodities();
 
   const billableCommoditySchema = useMemo(() => createBillableCommoditySchema(t), [t]);
 
@@ -114,8 +207,8 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
     control,
     handleSubmit,
     formState: { errors, isDirty },
-    setValue,
     reset,
+    setError,
   } = useForm<BillableCommodityFormData>({
     mode: 'all',
     defaultValues: {
@@ -135,7 +228,7 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm.trim());
-  const { searchResults, isLoading } = useFetchChargeItems(debouncedSearchTerm);
+  const { searchResults, isLoading, error: searchError, retry: retrySearch } = useFetchChargeItems(debouncedSearchTerm);
 
   // Re-initialize form when editing and dependencies load
   useEffect(() => {
@@ -167,23 +260,49 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
       return;
     }
 
+    if (billableCommoditiesError) {
+      showSnackbar({
+        title: t('commodityValidationError', 'Unable to validate commodity price'),
+        subtitle: t(
+          'commodityValidationErrorMessage',
+          'Existing commodity prices could not be loaded. Please try again.',
+        ),
+        kind: 'error',
+      });
+      return;
+    }
+
+    const itemName = itemToEdit?.item || selectedItem?.drugName || '';
+    let hasDuplicatePrice = false;
+
+    data.payment.forEach(({ paymentMode }, index) => {
+      if (isDuplicateCommodityPrice(billableCommodities, itemName, paymentMode, itemToEdit?.uuid)) {
+        hasDuplicatePrice = true;
+        setError(`payment.${index}.paymentMode`, {
+          type: 'validate',
+          message: t('commodityPaymentModeAlreadyExists', 'A price already exists for this commodity and payment mode'),
+        });
+      }
+    });
+
+    if (hasDuplicatePrice) {
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const payload = {
-      name: paymentModes.find((m) => m.uuid === data.payment[0].paymentMode)?.name || 'Unknown',
-      price: normalizePrice(data.payment[0].price),
-      paymentMode: {
-        uuid: data.payment[0].paymentMode,
-        name: paymentModes.find((m) => m.uuid === data.payment[0].paymentMode)?.name || '',
-      },
-      item: selectedItem?.uuid || itemToEdit?.item,
-    };
+    const pricePayloads = data.payment.map((payment) => buildBillableCommodityPricePayload(payment, paymentModes));
 
     try {
       if (itemToEdit) {
-        await updateBillableCommodity(itemToEdit.uuid, payload);
+        await updateBillableCommodity(itemToEdit.uuid, pricePayloads[0]);
       } else {
-        await createBillableCommodity(payload);
+        await createBillableCommodities(
+          pricePayloads.map((payload) => ({
+            ...payload,
+            item: selectedItem.uuid,
+          })),
+        );
       }
 
       showSnackbar({
@@ -197,9 +316,7 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
       });
 
       // Call onWorkspaceClose callback to refresh data in parent component
-      if (onWorkspaceClose) {
-        onWorkspaceClose();
-      }
+      await onWorkspaceClose?.();
 
       // Close the workspace
       if (closeWorkspaceWithSavedChanges) {
@@ -229,10 +346,11 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
   const title = itemToEdit
     ? t('editBillableCommodity', 'Edit billable commodity')
     : t('addBillableCommodity', 'Add billable commodity');
+  const hasUnsavedChanges = hasUnsavedCommodityChanges(isDirty, selectedItem);
 
-  if (isLoadingPaymentModes) {
+  if (isLoadingPaymentModes || isLoadingBillableCommodities) {
     return (
-      <Workspace2 title={title} hasUnsavedChanges={isDirty}>
+      <Workspace2 title={title} hasUnsavedChanges={hasUnsavedChanges}>
         <InlineLoading
           status="active"
           iconDescription={t('loadingDescription', 'Loading')}
@@ -243,7 +361,7 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
   }
 
   return (
-    <Workspace2 title={title} hasUnsavedChanges={isDirty}>
+    <Workspace2 title={title} hasUnsavedChanges={hasUnsavedChanges}>
       <Form
         aria-label={t('billableCommodityForm', 'Billable commodity form')}
         className={styles.form}
@@ -287,20 +405,21 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
                       <InlineLoading className={styles.loader} description={t('searching', 'Searching') + '...'} />
                     );
                   }
+                  if (searchError) {
+                    return <CommoditySearchError onRetry={() => retrySearch()} t={t} />;
+                  }
                   if (searchResults && searchResults.length) {
                     return (
                       <ul className={styles.conceptsList}>
                         {searchResults?.map((searchResult) => (
-                          <li
-                            className={styles.service}
+                          <CommoditySearchResult
                             key={searchResult.uuid}
-                            onClick={() => {
-                              setSelectedItem(searchResult);
+                            onSelect={(item) => {
+                              setSelectedItem(item);
                               setSearchTerm('');
                             }}
-                            role="menuitem">
-                            {searchResult.drugName}
-                          </li>
+                            searchResult={searchResult}
+                          />
                         ))}
                       </ul>
                     );
@@ -365,23 +484,24 @@ const BillableCommodityFormWorkspace: React.FC<Workspace2DefinitionProps<Billabl
                     )}
                   />
                   <div className={styles.removeButtonContainer}>
-                    <TrashCan
-                      onClick={() => handleRemovePaymentMode(index)}
-                      className={styles.removeButton}
-                      size={20}
+                    <RemovePaymentOptionButton
+                      label={t('removePaymentOption', 'Remove payment option')}
+                      onRemove={() => handleRemovePaymentMode(index)}
                     />
                   </div>
                 </div>
               ))}
-              <Button
-                className={styles.paymentButtons}
-                iconDescription={t('add', 'Add')}
-                kind="tertiary"
-                onClick={handleAppendPaymentMode}
-                renderIcon={(props) => <Add size={24} {...props} />}
-                type="button">
-                {t('addPaymentOption', 'Add payment option')}
-              </Button>
+              {!itemToEdit && (
+                <Button
+                  className={styles.paymentButtons}
+                  iconDescription={t('add', 'Add')}
+                  kind="tertiary"
+                  onClick={handleAppendPaymentMode}
+                  renderIcon={(props) => <Add size={24} {...props} />}
+                  type="button">
+                  {t('addPaymentOption', 'Add payment option')}
+                </Button>
+              )}
               {getPaymentErrorMessage() && <div className={styles.errorMessage}>{getPaymentErrorMessage()}</div>}
             </div>
           </section>

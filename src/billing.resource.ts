@@ -3,12 +3,12 @@ import dayjs from 'dayjs';
 import sortBy from 'lodash-es/sortBy';
 import {
   openmrsFetch,
-  restBaseUrl,
   useSession,
   useVisit,
   type SessionLocation,
   useOpenmrsFetchAll,
   useOpenmrsPagination,
+  restBaseUrl,
 } from '@openmrs/esm-framework';
 import { apiBasePath, omrsDateFormat } from './constants';
 import {
@@ -214,20 +214,6 @@ export function useBillableServices() {
   return useOpenmrsFetchAll<BillableItem>(url);
 }
 
-export function useFetchChargeItems(searchValue: string) {
-  const url = `${restBaseUrl}/stockmanagement/stockitem?v=default&limit=10&q=${encodeURIComponent(searchValue)}`;
-  const { data, isLoading, error } = useSWR<{ data: { results: Array<StockItem> } }, Error>(
-    searchValue ? url : null,
-    openmrsFetch,
-  );
-
-  return {
-    searchResults: data?.data?.results ?? [],
-    error,
-    isLoading,
-  };
-}
-
 export const processBillItems = (payload: CreateBillPayload) => {
   const url = `${apiBasePath}bill`;
   return openmrsFetch(url, {
@@ -249,6 +235,21 @@ export const updateBillItems = (payload: UpdateBillPayload) => {
     },
   });
 };
+
+export function useFetchChargeItems(searchValue: string) {
+  const url = `${restBaseUrl}/stockmanagement/stockitem?v=default&limit=10&q=${encodeURIComponent(searchValue)}`;
+  const { data, isLoading, error, mutate } = useSWR<{ data: { results: StockItem[] } }, Error>(
+    searchValue ? url : null,
+    openmrsFetch,
+  );
+
+  return {
+    searchResults: data?.data?.results ?? [],
+    error,
+    isLoading,
+    retry: mutate,
+  };
+}
 
 export const finalizeBill = (billUuid: string) => {
   const url = `${apiBasePath}bill/${billUuid}`;

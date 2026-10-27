@@ -32,10 +32,27 @@
 
 .removeButton {
   color: colors.$red-60;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: layout.$spacing-03;
 }
 
 .service {
+  @include type.type-style('body-compact-01');
+  background: transparent;
+  border: 0;
+  color: var(--cds-text-primary);
+  cursor: pointer;
+  display: block;
   padding: layout.$spacing-05 layout.$spacing-04;
+  text-align: left;
+  width: 100%;
+
+  &:hover,
+  &:focus-visible {
+    background-color: $ui-03;
+  }
 }
 
 .conceptsList {
@@ -43,10 +60,6 @@
   max-height: 14rem;
   overflow-y: auto;
   border: 1px solid $ui-03;
-
-  li:hover {
-    background-color: $ui-03;
-  }
 }
 
 .emptyResults {
