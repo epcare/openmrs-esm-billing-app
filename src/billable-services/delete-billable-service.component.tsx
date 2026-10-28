@@ -23,9 +23,9 @@ const DeleteBillableService: React.FC<{ deletingService?: any; onClose: () => vo
 
       showSnackbar({
         isLowContrast: true,
-        title: t('deleteBillableServiceSuccessTitle', 'Delete billable commodity'),
+        title: t('deleteBillableServiceSuccessTitle', 'Delete billable service'),
         kind: 'success',
-        subtitle: t('deleteBillableServiceSuccessMessage', 'Billable ervice deleted successfully'),
+        subtitle: t('deleteBillableServiceSuccessMessage', 'Billable service deleted successfully'),
       });
 
       onClose();
