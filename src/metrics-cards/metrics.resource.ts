@@ -1,5 +1,7 @@
 import { BillStatus, type MappedBill } from '../types';
 
+type BillMetric = Pick<MappedBill, 'status' | 'totalAmount'>;
+
 /**
  * A custom hook for calculating bill metrics.
  *
@@ -15,7 +17,7 @@ import { BillStatus, type MappedBill } from '../types';
  * }}
  */
 
-export const useBillMetrics = (bills: Array<MappedBill>) => {
+export const useBillMetrics = (bills: Array<BillMetric>) => {
   const { paidTotal, pendingTotal, cumulativeTotal } = calculateBillTotals(bills);
   return {
     cumulativeBills: cumulativeTotal,
@@ -24,7 +26,7 @@ export const useBillMetrics = (bills: Array<MappedBill>) => {
   };
 };
 
-const calculateBillTotals = (bills: Array<MappedBill>) => {
+const calculateBillTotals = (bills: Array<BillMetric>) => {
   let paidTotal = 0;
   let pendingTotal = 0;
   let cumulativeTotal = 0;

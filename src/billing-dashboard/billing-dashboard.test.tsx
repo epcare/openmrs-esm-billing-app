@@ -13,6 +13,13 @@ vi.mock('../billing.resource', () => ({
     error: null,
     isLoading: false,
   })),
+  useBillMetricsData: vi.fn(() => ({
+    bills: [],
+    error: null,
+    isLoading: false,
+    isValidating: false,
+    mutate: vi.fn(),
+  })),
   usePaginatedBills: vi.fn(() => ({
     bills: [],
     error: null,
