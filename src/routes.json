@@ -165,6 +165,11 @@
       "name": "billable-service-form",
       "component": "billableServiceFormWorkspace",
       "window": "billable-service-form-window"
+    },
+    {
+      "name": "billable-commodity-form",
+      "component": "billableCommodityFormWorkspace",
+      "window": "billable-commodity-form-window"
     }
   ],
   "workspaceWindows2": [
@@ -178,6 +183,11 @@
     },
     {
       "name": "billable-service-form-window",
+      "group": "billingFormWorkspaceGroup",
+      "width": "wider"
+    },
+    {
+      "name": "billable-commodity-form-window",
       "group": "billingFormWorkspaceGroup",
       "width": "wider"
     }

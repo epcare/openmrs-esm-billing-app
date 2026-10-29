@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import dayjs from 'dayjs';
 import { renderHook } from '@testing-library/react';
-import { useOpenmrsPagination } from '@openmrs/esm-framework';
-import { mapBillProperties, usePaginatedBills } from './billing.resource';
+import { useOpenmrsFetchAll, useOpenmrsPagination } from '@openmrs/esm-framework';
+import { mapBillProperties, useBillMetricsData, useBills, usePaginatedBills } from './billing.resource';
 import { apiBasePath } from './constants';
 import { calculateTotalAmount } from './helpers/functions';
 import type { LineItem, PatientInvoice, Payment } from './types';
@@ -22,10 +22,18 @@ vi.mock('@openmrs/esm-framework', async (importOriginal) => {
       totalCount: 0,
       goTo: vi.fn(),
     })),
+    useOpenmrsFetchAll: vi.fn(() => ({
+      data: [],
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    })),
   };
 });
 
 const mockUseOpenmrsPagination = vi.mocked(useOpenmrsPagination);
+const mockUseOpenmrsFetchAll = vi.mocked(useOpenmrsFetchAll);
 
 type CashPoint = PatientInvoice['cashPoint'];
 type Provider = PatientInvoice['cashier'];
@@ -496,7 +504,7 @@ describe('mapBillProperties', () => {
 describe('usePaginatedBills', () => {
   const customRepresentation =
     '(id,uuid,dateCreated,status,receiptNumber,patient:(uuid,display),lineItems:(uuid,item,billableService,voided))';
-  const baseUrl = `${apiBasePath}bill?v=custom:${customRepresentation}&pageSize=10`;
+  const baseUrl = `${apiBasePath}bill?q=all&v=custom:${customRepresentation}&pageSize=10`;
   const startDate = new Date(2026, 0, 15, 10, 30);
   const endDate = new Date(2026, 0, 20, 10, 30);
   // Day boundaries are literal; only the UTC offset comes from the machine
@@ -546,5 +554,60 @@ describe('usePaginatedBills', () => {
       `${baseUrl}&status=PENDING&patientName=John&startDate=${expectedStartDateText}&endDate=${expectedEndDateText}`,
       10,
     );
+  });
+});
+
+describe('useBills', () => {
+  it('uses a supported search parameter when requesting all bills', () => {
+    renderHook(() => useBills());
+
+    expect(mockUseOpenmrsFetchAll).toHaveBeenCalledWith(`${apiBasePath}bill?q=all&v=full`);
+  });
+
+  it('keeps bill filters alongside the search parameter', () => {
+    renderHook(() => useBills('patient-uuid', 'PENDING', 'visit-uuid'));
+
+    expect(mockUseOpenmrsFetchAll).toHaveBeenCalledWith(
+      `${apiBasePath}bill?q=all&v=full&patientUuid=patient-uuid&status=PENDING&visitUuid=visit-uuid`,
+    );
+  });
+
+  it('filters bills by date on the server', () => {
+    const startDate = new Date(2026, 0, 15, 10, 30);
+    const endDate = new Date(2026, 0, 20, 10, 30);
+    const expectedStartDateText = encodeURIComponent(`2026-01-15T00:00:00.000${dayjs(startDate).format('ZZ')}`);
+    const expectedEndDateText = encodeURIComponent(`2026-01-20T23:59:59.999${dayjs(endDate).format('ZZ')}`);
+
+    renderHook(() => useBills(undefined, undefined, undefined, startDate, endDate));
+
+    expect(mockUseOpenmrsFetchAll).toHaveBeenCalledWith(
+      `${apiBasePath}bill?q=all&v=full&startDate=${expectedStartDateText}&endDate=${expectedEndDateText}`,
+    );
+  });
+
+  it('skips fetching an inverted date range', () => {
+    const startDate = new Date(2026, 0, 20);
+    const endDate = new Date(2026, 0, 15);
+
+    renderHook(() => useBills(undefined, undefined, undefined, startDate, endDate));
+
+    expect(mockUseOpenmrsFetchAll).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('useBillMetricsData', () => {
+  it('requests only the fields needed to calculate metrics', () => {
+    mockUseOpenmrsFetchAll.mockReturnValueOnce({
+      data: [{ uuid: 'bill-1', status: 'PAID', total: 125 }],
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    } as any);
+
+    const { result } = renderHook(() => useBillMetricsData());
+
+    expect(mockUseOpenmrsFetchAll).toHaveBeenCalledWith(`${apiBasePath}bill?q=all&v=custom:(uuid,status,total)`);
+    expect(result.current.bills).toEqual([{ status: 'PAID', totalAmount: 125 }]);
   });
 });

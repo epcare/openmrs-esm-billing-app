@@ -99,9 +99,14 @@ const BillingReports: React.FC = () => {
   const { t } = useTranslation();
   const layout = useLayoutType();
   const responsiveSize = isDesktop(layout) ? 'sm' : 'lg';
-  const { bills = [], error, isLoading, isValidating } = useBills();
   const [selectedRange, setSelectedRange] = useState<[Date, Date]>(getMonthRange);
   const [appliedRange, setAppliedRange] = useState<[Date, Date]>(getMonthRange);
+  const {
+    bills = [],
+    error,
+    isLoading,
+    isValidating,
+  } = useBills(undefined, undefined, undefined, appliedRange[0], appliedRange[1]);
   const [search, setSearch] = useState('');
   const [pageSize, setPageSize] = useState(10);
 

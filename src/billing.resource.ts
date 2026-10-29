@@ -75,7 +75,9 @@ export const usePaginatedBills = (
   const customRepresentation =
     '(id,uuid,dateCreated,status,receiptNumber,patient:(uuid,display),lineItems:(uuid,item,billableService,voided))';
 
-  let url = `${apiBasePath}bill?v=custom:${customRepresentation}&pageSize=${pageSize}`;
+  // BillResource supports search but not an unfiltered collection GET. q=all
+  // selects the resource's search operation without narrowing the results.
+  let url = `${apiBasePath}bill?q=all&v=custom:${customRepresentation}&pageSize=${pageSize}`;
 
   if (status) {
     url += `&status=${status}`;
@@ -113,8 +115,16 @@ export const usePaginatedBills = (
   };
 };
 
-export const useBills = (patientUuid?: string, billStatus?: string, visitUuid?: string) => {
-  let url = `${apiBasePath}bill?v=full`;
+export const useBills = (
+  patientUuid?: string,
+  billStatus?: string,
+  visitUuid?: string,
+  startDate?: Date | null,
+  endDate?: Date | null,
+) => {
+  // Ensure requests without patient/status/visit filters use BillResource.doSearch()
+  // instead of the unsupported BillResource.getAll() operation.
+  let url = `${apiBasePath}bill?q=all&v=full`;
 
   if (patientUuid) {
     url += `&patientUuid=${patientUuid}`;
@@ -128,13 +138,38 @@ export const useBills = (patientUuid?: string, billStatus?: string, visitUuid?: 
     url += `&visitUuid=${visitUuid}`;
   }
 
-  const { data, error, isLoading, isValidating, mutate } = useOpenmrsFetchAll<PatientInvoice>(url);
+  if (startDate) {
+    url += `&startDate=${encodeURIComponent(dayjs(startDate).startOf('day').format(omrsDateFormat))}`;
+  }
+
+  if (endDate) {
+    url += `&endDate=${encodeURIComponent(dayjs(endDate).endOf('day').format(omrsDateFormat))}`;
+  }
+
+  const isRangeValid = !startDate || !endDate || startDate <= endDate;
+  const { data, error, isLoading, isValidating, mutate } = useOpenmrsFetchAll<PatientInvoice>(
+    isRangeValid ? url : null,
+  );
 
   const sortedBills = sortBy(data ?? [], ['dateCreated']).reverse();
   const mappedResults = sortedBills?.map((bill) => mapBillProperties(bill));
 
   return {
     bills: mappedResults,
+    error,
+    isLoading,
+    isValidating,
+    mutate,
+  };
+};
+
+export const useBillMetricsData = () => {
+  const url = `${apiBasePath}bill?q=all&v=custom:(uuid,status,total)`;
+  const { data, error, isLoading, isValidating, mutate } =
+    useOpenmrsFetchAll<Pick<PatientInvoice, 'uuid' | 'status' | 'total'>>(url);
+
+  return {
+    bills: (data ?? []).map((bill) => ({ status: bill.status as BillStatus, totalAmount: bill.total })),
     error,
     isLoading,
     isValidating,
